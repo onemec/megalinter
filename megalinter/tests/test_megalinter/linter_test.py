@@ -12,7 +12,7 @@ import unittest
 import uuid
 from unittest import mock
 
-from megalinter import config, utils, utilstest
+from megalinter import config, linter_factory, utils, utilstest
 from megalinter.Linter import MAX_PROJECT_EXCLUDE_ARG_BYTES, Linter
 from megalinter.linters.JsCpdLinter import JsCpdLinter
 from megalinter.linters.StyleLintLinter import StyleLintLinter
@@ -818,3 +818,40 @@ runs:
                 generated = json.load(file_handler)
         self.assertEqual([os.path.join(workspace, "src")], generated["path"])
         self.assertEqual(["**/*.md", "**/vendor/**"], generated["ignore"])
+
+    def test_python_default_style_activation(self):
+        base_params = self.build_activation_params([], [], "ENABLE")
+        req_id = str(uuid.uuid1())
+        config.init_config(req_id, None, {})
+        try:
+            black = linter_factory.build_linter(
+                "PYTHON", "black", {**base_params, "request_id": req_id}
+            )
+            ruff_format = linter_factory.build_linter(
+                "PYTHON", "ruff-format", {**base_params, "request_id": req_id}
+            )
+            self.assertFalse(black.is_active)
+            self.assertTrue(ruff_format.is_active)
+            self.assertEqual(black.__class__.__name__, "BlackLinter")
+            self.assertEqual(ruff_format.__class__.__name__, "RuffFormatLinter")
+
+            black.pre_test("test_success")
+            self.assertEqual(
+                config.get(req_id, "PYTHON_DEFAULT_STYLE", "ruff"), "black"
+            )
+        finally:
+            config.delete(req_id)
+
+        req_id_black = str(uuid.uuid1())
+        config.init_config(req_id_black, None, {"PYTHON_DEFAULT_STYLE": "black"})
+        try:
+            black_explicit = linter_factory.build_linter(
+                "PYTHON", "black", {**base_params, "request_id": req_id_black}
+            )
+            ruff_format_explicit = linter_factory.build_linter(
+                "PYTHON", "ruff-format", {**base_params, "request_id": req_id_black}
+            )
+            self.assertTrue(black_explicit.is_active)
+            self.assertFalse(ruff_format_explicit.is_active)
+        finally:
+            config.delete(req_id_black)
