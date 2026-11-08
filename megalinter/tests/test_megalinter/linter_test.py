@@ -7,7 +7,10 @@ Unit tests for Linter class
 import contextlib
 import json
 import os
+import shutil
+import subprocess
 import tempfile
+import tomllib
 import unittest
 import uuid
 from unittest import mock
@@ -922,4 +925,67 @@ runs:
             )
         finally:
             config.delete(req_id)
+
+    def test_python_ruff_default_rules(self):
+        root_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "..")
+        )
+        template_path = os.path.join(root_dir, "TEMPLATES", ".ruff.toml")
+        self.assertTrue(os.path.isfile(template_path), f"Missing {template_path}")
+
+        with open(template_path, "rb") as f:
+            ruff_conf = tomllib.load(f)
+
+        self.assertEqual(ruff_conf.get("line-length"), 88)
+        self.assertIn("lint", ruff_conf)
+        self.assertEqual(
+            ruff_conf["lint"].get("select"),
+            ["E", "F", "W", "I", "S"],
+            "TEMPLATES/.ruff.toml must select E, F, W, I, S",
+        )
+
+        bad_dir = os.path.join(root_dir, ".automation", "test", "python_ruff", "bad")
+        good_dir = os.path.join(root_dir, ".automation", "test", "python_ruff", "good")
+        self.assertTrue(os.path.isdir(bad_dir), f"Missing {bad_dir}")
+        self.assertTrue(os.path.isdir(good_dir), f"Missing {good_dir}")
+
+        ruff_bin = shutil.which("ruff")
+        if not ruff_bin and shutil.which("uvx"):
+            ruff_cmd = ["uvx", "ruff"]
+        elif ruff_bin:
+            ruff_cmd = [ruff_bin]
+        else:
+            ruff_cmd = None
+
+        if ruff_cmd:
+            # Good fixtures (excluding .wireit forwarding poison fixture) should pass
+            res_good = subprocess.run(
+                [*ruff_cmd, "check", "--config", template_path, "--extend-exclude", ".wireit", good_dir],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(
+                res_good.returncode,
+                0,
+                f"ruff check failed on good fixtures: {res_good.stdout}\n{res_good.stderr}",
+            )
+
+            # Bad fixtures should trigger violations across all rule prefixes E, F, W, I, S
+            res_bad = subprocess.run(
+                [*ruff_cmd, "check", "--config", template_path, bad_dir],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(res_bad.returncode, 0, "ruff check should fail on bad fixtures")
+            output_bad = res_bad.stdout + res_bad.stderr
+            triggered_rules = {
+                line.split()[0]
+                for line in output_bad.splitlines()
+                if line and any(line.startswith(p) for p in ["E", "F", "W", "I", "S"])
+            }
+            for prefix in ["E", "F", "W", "I", "S"]:
+                self.assertTrue(
+                    any(code.startswith(prefix) for code in triggered_rules),
+                    f"Expected rule prefix '{prefix}' to be triggered by bad fixtures, got: {triggered_rules}",
+                )
 
