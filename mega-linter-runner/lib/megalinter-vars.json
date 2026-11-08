@@ -21253,7 +21253,7 @@
       "type": "string",
       "title": "Python default style",
       "description": "Style of python formatting to apply",
-      "default": "black",
+      "default": "ruff",
       "enum": [
         "black",
         "ruff"
