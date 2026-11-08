@@ -134,6 +134,7 @@ linters:
           url: https://marketplace.visualstudio.com/items?itemName=ms-python.pylint
   # BLACK
   - linter_name: black
+    class: BlackLinter
     file_extensions:
       - ".py"
       - ".pyi"
@@ -179,7 +180,7 @@ linters:
       - type: variable
         variable: PYTHON_DEFAULT_STYLE
         expected_value: black
-        default_value: black
+        default_value: ruff
     linter_url: https://black.readthedocs.io/en/stable/
     linter_repo: https://github.com/psf/black
     linter_megalinter_ref_url: "no"
@@ -930,7 +931,7 @@ linters:
       - type: variable
         variable: PYTHON_DEFAULT_STYLE
         expected_value: ruff
-        default_value: black
+        default_value: ruff
     linter_text: |
       **Ruff Formatter** is the formatting component of Ruff, an extremely fast Python code formatter written in Rust. Designed as a drop-in replacement for Black, it provides consistent Python code formatting at unprecedented speed.
 

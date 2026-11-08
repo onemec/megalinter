@@ -24086,7 +24086,7 @@
       "x-section": "SECURITY"
     },
     "PYTHON_DEFAULT_STYLE": {
-      "default": "black",
+      "default": "ruff",
       "description": "Style of python formatting to apply",
       "enum": [
         "black",
