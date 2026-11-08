@@ -102,12 +102,12 @@ ARG PIP_RUMDL_VERSION=0.3.0
 # renovate: datasource=nuget depName=PSScriptAnalyzer registryUrl=https://www.powershellgallery.com/api/v2/
 ARG PSSA_VERSION='1.25.0'
 
+# renovate: datasource=pypi depName=ruff
+ARG PIP_RUFF_VERSION=0.17.2
 # renovate: datasource=pypi depName=black
 ARG PIP_BLACK_VERSION=26.10.1
 # renovate: datasource=pypi depName=isort
 ARG PIP_ISORT_VERSION=9.0.2
-# renovate: datasource=pypi depName=ruff
-ARG PIP_RUFF_VERSION=0.17.2
 # renovate: datasource=pypi depName=rstfmt
 ARG PIP_RSTFMT_VERSION=0.0.14
 # renovate: datasource=pypi depName=snakefmt
@@ -210,6 +210,10 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && VIRTUAL_ENV="/venvs/rumdl" uv pip install rumdl==${PIP_RUMDL_VERSION} \
     && VIRTUAL_ENV="/venvs/rumdl" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
     && VIRTUAL_ENV="/venvs/rumdl" rm -rf /venvs/rumdl/lib/python3.13/site-packages/setuptools/_vendor/wheel* \
+    && uv venv --seed --no-project --no-managed-python "/venvs/ruff-format" \
+    && VIRTUAL_ENV="/venvs/ruff-format" uv pip install ruff==${PIP_RUFF_VERSION} \
+    && VIRTUAL_ENV="/venvs/ruff-format" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
+    && VIRTUAL_ENV="/venvs/ruff-format" rm -rf /venvs/ruff-format/lib/python3.13/site-packages/setuptools/_vendor/wheel* \
     && uv venv --seed --no-project --no-managed-python "/venvs/black" \
     && VIRTUAL_ENV="/venvs/black" uv pip install black[jupyter]==${PIP_BLACK_VERSION} \
     && VIRTUAL_ENV="/venvs/black" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
@@ -218,10 +222,6 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && VIRTUAL_ENV="/venvs/isort" uv pip install black==${PIP_BLACK_VERSION} isort==${PIP_ISORT_VERSION} \
     && VIRTUAL_ENV="/venvs/isort" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
     && VIRTUAL_ENV="/venvs/isort" rm -rf /venvs/isort/lib/python3.13/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/ruff-format" \
-    && VIRTUAL_ENV="/venvs/ruff-format" uv pip install ruff==${PIP_RUFF_VERSION} \
-    && VIRTUAL_ENV="/venvs/ruff-format" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/ruff-format" rm -rf /venvs/ruff-format/lib/python3.13/site-packages/setuptools/_vendor/wheel* \
     && uv venv --seed --no-project --no-managed-python "/venvs/rstfmt" \
     && VIRTUAL_ENV="/venvs/rstfmt" uv pip install rstfmt==${PIP_RSTFMT_VERSION} \
     && VIRTUAL_ENV="/venvs/rstfmt" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
@@ -233,7 +233,7 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && find /venvs \( -type f \( -iname \*.pyc -o -iname \*.pyo \) -o -type d -iname __pycache__ \) -delete \
     && rm -rf /root/.cache \
     && apk del .ml-build-deps
-ENV PATH="${PATH}":/venvs/rumdl/bin:/venvs/black/bin:/venvs/isort/bin:/venvs/ruff-format/bin:/venvs/rstfmt/bin:/venvs/snakefmt/bin
+ENV PATH="${PATH}":/venvs/rumdl/bin:/venvs/ruff-format/bin:/venvs/black/bin:/venvs/isort/bin:/venvs/rstfmt/bin:/venvs/snakefmt/bin
 #PIPVENV__END
 
 ############################
@@ -305,9 +305,9 @@ esac \
 # rumdl installation
 # powershell_formatter installation
     && pwsh -c 'Install-Module -Name PSScriptAnalyzer -RequiredVersion ${PSSA_VERSION} -Scope AllUsers -Force -ErrorAction Stop'
+# ruff-format installation
 # black installation
 # isort installation
-# ruff-format installation
 # rstfmt installation
 # snakefmt installation
 # terraform-fmt installation

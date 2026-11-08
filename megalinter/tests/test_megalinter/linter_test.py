@@ -855,3 +855,71 @@ runs:
             self.assertFalse(ruff_format_explicit.is_active)
         finally:
             config.delete(req_id_black)
+
+    def test_python_linters_deprecation_and_ordering(self):
+        base_params = self.build_activation_params([], [], "ENABLE")
+        req_id = str(uuid.uuid1())
+        config.init_config(req_id, None, {})
+        try:
+            expected_deprecated = ["black", "flake8", "isort", "bandit"]
+            expected_active = ["pylint", "mypy", "nbqa", "pyright", "ruff", "ruff-format"]
+
+            for name in expected_deprecated:
+                linter = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertTrue(
+                    getattr(linter, "deprecated", False),
+                    f"{name} should have deprecated: true",
+                )
+                self.assertIn(
+                    "Deprecated in favor of Ruff",
+                    getattr(linter, "deprecated_description", ""),
+                    f"{name} deprecated_description should guide towards Ruff",
+                )
+
+            for name in expected_active:
+                linter = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertFalse(
+                    getattr(linter, "deprecated", False),
+                    f"{name} should NOT be deprecated",
+                )
+
+            # Check descriptor ordering
+            descriptor_file = os.path.join(
+                utils.get_descriptor_dir(), "python.megalinter-descriptor.yml"
+            )
+            descriptor_info = linter_factory.build_descriptor_info(descriptor_file)
+            linter_names = [l["linter_name"] for l in descriptor_info["linters"]]
+            expected_order = [
+                "ruff",
+                "ruff-format",
+                "pylint",
+                "mypy",
+                "nbqa",
+                "pyright",
+                "black",
+                "flake8",
+                "isort",
+                "bandit",
+            ]
+            self.assertEqual(linter_names, expected_order)
+
+            # Check cupcake flavor exclusions
+            linters_by_name = {l["linter_name"]: l for l in descriptor_info["linters"]}
+            for name in ["black", "flake8", "isort"]:
+                self.assertIn(
+                    "cupcake",
+                    linters_by_name[name].get("descriptor_flavors_exclude", []),
+                    f"{name} should exclude cupcake flavor",
+                )
+            self.assertNotIn(
+                "cupcake",
+                linters_by_name["bandit"].get("descriptor_flavors", []),
+                "bandit should not include cupcake flavor",
+            )
+        finally:
+            config.delete(req_id)
+
