@@ -4,15 +4,22 @@ Unit tests for Linter class
 
 """
 
+import ast
 import contextlib
 import json
 import os
+import shutil
+import subprocess
 import tempfile
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 import unittest
 import uuid
 from unittest import mock
 
-from megalinter import config, utils, utilstest
+from megalinter import config, linter_factory, utils, utilstest
 from megalinter.Linter import MAX_PROJECT_EXCLUDE_ARG_BYTES, Linter
 from megalinter.linters.JsCpdLinter import JsCpdLinter
 from megalinter.linters.StyleLintLinter import StyleLintLinter
@@ -818,3 +825,186 @@ runs:
                 generated = json.load(file_handler)
         self.assertEqual([os.path.join(workspace, "src")], generated["path"])
         self.assertEqual(["**/*.md", "**/vendor/**"], generated["ignore"])
+
+    def test_python_default_style_activation(self):
+        base_params = self.build_activation_params([], [], "ENABLE")
+        req_id = str(uuid.uuid1())
+        config.init_config(req_id, None, {})
+        try:
+            black = linter_factory.build_linter(
+                "PYTHON", "black", {**base_params, "request_id": req_id}
+            )
+            ruff_format = linter_factory.build_linter(
+                "PYTHON", "ruff-format", {**base_params, "request_id": req_id}
+            )
+            self.assertFalse(black.is_active)
+            self.assertTrue(ruff_format.is_active)
+            self.assertEqual(black.__class__.__name__, "BlackLinter")
+            self.assertEqual(ruff_format.__class__.__name__, "RuffFormatLinter")
+
+            black.pre_test("test_success")
+            self.assertEqual(
+                config.get(req_id, "PYTHON_DEFAULT_STYLE", "ruff"), "black"
+            )
+        finally:
+            config.delete(req_id)
+
+        req_id_black = str(uuid.uuid1())
+        config.init_config(req_id_black, None, {"PYTHON_DEFAULT_STYLE": "black"})
+        try:
+            black_explicit = linter_factory.build_linter(
+                "PYTHON", "black", {**base_params, "request_id": req_id_black}
+            )
+            ruff_format_explicit = linter_factory.build_linter(
+                "PYTHON", "ruff-format", {**base_params, "request_id": req_id_black}
+            )
+            self.assertTrue(black_explicit.is_active)
+            self.assertFalse(ruff_format_explicit.is_active)
+        finally:
+            config.delete(req_id_black)
+
+    def test_python_linters_deprecation_and_ordering(self):
+        base_params = self.build_activation_params([], [], "ENABLE")
+        req_id = str(uuid.uuid1())
+        config.init_config(req_id, None, {})
+        try:
+            expected_deprecated = ["black", "flake8", "isort", "bandit"]
+            expected_active = ["pylint", "mypy", "nbqa", "pyright", "ruff", "ruff-format"]
+
+            for name in expected_deprecated:
+                linter = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertTrue(
+                    getattr(linter, "deprecated", False),
+                    f"{name} should have deprecated: true",
+                )
+                self.assertIn(
+                    "Deprecated in favor of Ruff",
+                    getattr(linter, "deprecated_description", ""),
+                    f"{name} deprecated_description should guide towards Ruff",
+                )
+
+            for name in expected_active:
+                linter = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertFalse(
+                    getattr(linter, "deprecated", False),
+                    f"{name} should NOT be deprecated",
+                )
+
+            # Check descriptor ordering
+            descriptor_file = os.path.join(
+                utils.get_descriptor_dir(), "python.megalinter-descriptor.yml"
+            )
+            descriptor_info = linter_factory.build_descriptor_info(descriptor_file)
+            linter_names = [l["linter_name"] for l in descriptor_info["linters"]]
+            expected_order = [
+                "ruff",
+                "ruff-format",
+                "pylint",
+                "mypy",
+                "nbqa",
+                "pyright",
+                "black",
+                "flake8",
+                "isort",
+                "bandit",
+            ]
+            self.assertEqual(linter_names, expected_order)
+
+            # Check cupcake flavor exclusions
+            linters_by_name = {l["linter_name"]: l for l in descriptor_info["linters"]}
+            for name in ["black", "flake8", "isort"]:
+                self.assertIn(
+                    "cupcake",
+                    linters_by_name[name].get("descriptor_flavors_exclude", []),
+                    f"{name} should exclude cupcake flavor",
+                )
+            self.assertNotIn(
+                "cupcake",
+                linters_by_name["bandit"].get("descriptor_flavors", []),
+                "bandit should not include cupcake flavor",
+            )
+        finally:
+            config.delete(req_id)
+
+    def test_python_ruff_default_rules(self):
+        root_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "..")
+        )
+        template_path = os.path.join(root_dir, "TEMPLATES", ".ruff.toml")
+        self.assertTrue(os.path.isfile(template_path), f"Missing {template_path}")
+
+        with open(template_path, "rb") as f:
+            ruff_conf = tomllib.load(f)
+
+        self.assertEqual(ruff_conf.get("line-length"), 88)
+        self.assertIn("lint", ruff_conf)
+        self.assertEqual(
+            ruff_conf["lint"].get("select"),
+            ["E", "F", "W", "I", "S"],
+            "TEMPLATES/.ruff.toml must select E, F, W, I, S",
+        )
+
+        bad_dir = os.path.join(root_dir, ".automation", "test", "python_ruff", "bad")
+        good_dir = os.path.join(root_dir, ".automation", "test", "python_ruff", "good")
+        self.assertTrue(os.path.isdir(bad_dir), f"Missing {bad_dir}")
+        self.assertTrue(os.path.isdir(good_dir), f"Missing {good_dir}")
+
+        # Verify good fixture files are present and contain valid Python syntax
+        good_files = [
+            os.path.join(good_dir, f)
+            for f in os.listdir(good_dir)
+            if f.endswith(".py")
+        ]
+        self.assertGreaterEqual(
+            len(good_files), 2, "Expected at least 2 good fixture files"
+        )
+        for good_file in good_files:
+            with open(good_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertTrue(len(content.strip()) > 0, f"Fixture {good_file} is empty")
+            try:
+                ast.parse(content, filename=good_file)
+            except SyntaxError as e:
+                self.fail(f"Good fixture {good_file} failed syntax parsing: {e}")
+
+        # Verify bad fixture files are present and contain expected rule patterns
+        bad_files = [
+            os.path.join(bad_dir, f)
+            for f in os.listdir(bad_dir)
+            if f.endswith(".py")
+        ]
+        self.assertGreaterEqual(
+            len(bad_files), 2, "Expected at least 2 bad fixture files"
+        )
+
+        combined_bad_content = ""
+        for bad_file in bad_files:
+            with open(bad_file, "r", encoding="utf-8") as f:
+                combined_bad_content += f.read() + "\n"
+
+        # Verify style violations (E / W)
+        self.assertTrue(
+            "== None" in combined_bad_content or ": pass" in combined_bad_content,
+            "Bad fixtures must contain style (E) violation patterns (e.g. '== None' or ': pass')",
+        )
+        self.assertTrue(
+            r"\." in combined_bad_content or "\\." in combined_bad_content,
+            "Bad fixtures must contain style/warning (W) violation patterns (e.g. invalid escape sequence)",
+        )
+
+        # Verify import order violations (I)
+        self.assertTrue(
+            "import sys\nimport os" in combined_bad_content,
+            "Bad fixtures must contain unsorted imports (I rule pattern, sys before os)",
+        )
+
+        # Verify security violations (S)
+        self.assertTrue(
+            "eval(" in combined_bad_content and "shell=True" in combined_bad_content,
+            "Bad fixtures must contain security (S) violation patterns (eval and shell=True)",
+        )
+
