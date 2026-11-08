@@ -600,7 +600,7 @@ linters:
   # BLACK
   - linter_name: black
     deprecated: true
-    deprecated_description: "Deprecated in favor of Ruff (ruff check --select E,F,W,I,S). Ruff natively implements Black formatting, isort import sorting, Flake8 style rules, and Bandit security checks (S series) running 30–100× faster."
+    deprecated_description: "Deprecated in favor of Ruff format (PYTHON_RUFF_FORMAT / ruff format). Ruff natively implements all Black formatting rules (>99.9% compatibility) while running 30–100× faster."
     descriptor_flavors_exclude:
       - cupcake
     class: BlackLinter
