@@ -10,12 +10,10 @@ import uuid
 
 import jsonschema
 import yaml
+
 from megalinter import config, linter_factory, utils
 
-
-REPO_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..")
-)
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
 class SpellDescriptorTest(unittest.TestCase):
@@ -101,9 +99,7 @@ class SpellDescriptorTest(unittest.TestCase):
         jsonschema.validate(instance=descriptor, schema=schema)
 
         typos_entries = [
-            item
-            for item in descriptor["linters"]
-            if item.get("linter_name") == "typos"
+            item for item in descriptor["linters"] if item.get("linter_name") == "typos"
         ]
         self.assertEqual(len(typos_entries), 1)
         typos = typos_entries[0]
@@ -170,16 +166,17 @@ class SpellDescriptorTest(unittest.TestCase):
             descriptor = yaml.safe_load(f)
 
         typos = next(
-            item
-            for item in descriptor["linters"]
-            if item.get("linter_name") == "typos"
+            item for item in descriptor["linters"] if item.get("linter_name") == "typos"
         )
         pattern = re.compile(typos["cli_lint_errors_regex"])
         sample_output = "\n".join(
             [
                 '{"type":"binary_file","path":"./image.png"}',
                 '{"type":"typo","path":"./a.py","line_num":1,"byte_offset":2,"typo":"teh","corrections":["the"]}',
-                '{"type": "typo", "path": "./b.md", "line_num": 3, "byte_offset": 0, "typo": "recieve", "corrections": ["receive"]}',
+                (
+                    '{"type": "typo", "path": "./b.md", "line_num": 3, '
+                    '"byte_offset": 0, "typo": "recieve", "corrections": ["receive"]}'
+                ),
             ]
         )
         self.assertEqual(len(pattern.findall(sample_output)), 2)
@@ -193,7 +190,11 @@ class SpellDescriptorTest(unittest.TestCase):
                         "",
                         f"Expected blank line after {line!r} in linter_text",
                     )
-            if line.startswith("- ") and idx > 0 and not lines[idx - 1].startswith("- "):
+            if (
+                line.startswith("- ")
+                and idx > 0
+                and not lines[idx - 1].startswith("- ")
+            ):
                 self.assertEqual(
                     lines[idx - 1],
                     "",
