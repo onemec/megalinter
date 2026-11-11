@@ -217,14 +217,6 @@ ARG PIP_PROSELINT_VERSION=0.16.0
 ARG PIP_CODESPELL_VERSION=2.4.3
 # renovate: datasource=github-releases depName=crate-ci/typos extractVersion=^v(?<version>.+)$
 ARG SPELL_TYPOS_VERSION=1.52.0
-RUN case "${TARGETARCH}" in \
-      amd64) TYPOS_ARCH="x86_64" ;; \
-      arm64) TYPOS_ARCH="aarch64" ;; \
-      *) echo "Unsupported TARGETARCH: ${TARGETARCH}" && exit 1 ;; \
-    esac && \
-    curl -fsSL "https://github.com/crate-ci/typos/releases/download/v${SPELL_TYPOS_VERSION}/typos-v${SPELL_TYPOS_VERSION}-${TYPOS_ARCH}-unknown-linux-musl.tar.gz" \
-    | tar -xz -C /usr/local/bin ./typos && \
-    chmod +x /usr/local/bin/typos
 # renovate: datasource=pypi depName=sqlfluff
 ARG PIP_SQLFLUFF_VERSION=4.5.0
 # renovate: datasource=npm depName=@ibm/tekton-lint
@@ -602,7 +594,7 @@ RUN curl -sSfL https://raw.githubusercontent.com/anchore/syft/refs/tags/v${REPOS
 # code-analyzer-apex installation
     && sf plugins install code-analyzer@${SALESFORCE_CODE_ANALYZER_VERSION} \
     && (npm cache clean --force || true) \
-    && rm -rf /root/.npm/_cacache
+    && rm -rf /root/.npm/_cacache \
 # code-analyzer-apexguru installation
 # Next line commented because already managed by another linter
 # RUN sf plugins install code-analyzer@${SALESFORCE_CODE_ANALYZER_VERSION} \
@@ -633,6 +625,14 @@ RUN curl -sSfL https://raw.githubusercontent.com/anchore/syft/refs/tags/v${REPOS
 # Managed with COPY --link --from=lychee /usr/local/bin/lychee /usr/bin/
 # codespell installation
 # typos installation
+    && case "${TARGETARCH}" in \
+      amd64) TYPOS_ARCH="x86_64" ;; \
+      arm64) TYPOS_ARCH="aarch64" ;; \
+      *) echo "Unsupported TARGETARCH: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    curl -fsSL "https://github.com/crate-ci/typos/releases/download/v${SPELL_TYPOS_VERSION}/typos-v${SPELL_TYPOS_VERSION}-${TYPOS_ARCH}-unknown-linux-musl.tar.gz" \
+    | tar -xz -C /usr/local/bin ./typos && \
+    chmod +x /usr/local/bin/typos
 # sqlfluff installation
 # tekton-lint installation
 # prettier installation

@@ -67,14 +67,6 @@ ARG TARGETPLATFORM
 ARG TARGETARCH
 # renovate: datasource=github-releases depName=crate-ci/typos extractVersion=^v(?<version>.+)$
 ARG SPELL_TYPOS_VERSION=1.52.0
-RUN case "${TARGETARCH}" in \
-      amd64) TYPOS_ARCH="x86_64" ;; \
-      arm64) TYPOS_ARCH="aarch64" ;; \
-      *) echo "Unsupported TARGETARCH: ${TARGETARCH}" && exit 1 ;; \
-    esac && \
-    curl -fsSL "https://github.com/crate-ci/typos/releases/download/v${SPELL_TYPOS_VERSION}/typos-v${SPELL_TYPOS_VERSION}-${TYPOS_ARCH}-unknown-linux-musl.tar.gz" \
-    | tar -xz -C /usr/local/bin ./typos && \
-    chmod +x /usr/local/bin/typos
 #ARG__END
 
 ####################
@@ -174,6 +166,14 @@ ENV PATH="/node-deps/node_modules/.bin:${PATH}" \
 #############################################################################################
 #OTHER__START
 # typos installation
+RUN case "${TARGETARCH}" in \
+      amd64) TYPOS_ARCH="x86_64" ;; \
+      arm64) TYPOS_ARCH="aarch64" ;; \
+      *) echo "Unsupported TARGETARCH: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    curl -fsSL "https://github.com/crate-ci/typos/releases/download/v${SPELL_TYPOS_VERSION}/typos-v${SPELL_TYPOS_VERSION}-${TYPOS_ARCH}-unknown-linux-musl.tar.gz" \
+    | tar -xz -C /usr/local/bin ./typos && \
+    chmod +x /usr/local/bin/typos
 #OTHER__END
 
 ################################

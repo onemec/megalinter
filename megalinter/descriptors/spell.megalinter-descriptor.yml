@@ -493,6 +493,7 @@ linters:
         - |-
           # renovate: datasource=github-releases depName=crate-ci/typos extractVersion=^v(?<version>.+)$
           ARG SPELL_TYPOS_VERSION=1.52.0
+        - |-
           RUN case "${TARGETARCH}" in \
                 amd64) TYPOS_ARCH="x86_64" ;; \
                 arm64) TYPOS_ARCH="aarch64" ;; \
