@@ -109,3 +109,78 @@ class removed_linters_test(unittest.TestCase):
             self.assertRegex(info["removed_in"], r"^\d+\.\d+\.\d+$", key)
             self.assertTrue(info["reason"], key)
             self.assertIn("replacement", info, key)
+
+    def test_v11_coffee_coffeelint_and_coffee_descriptor(self):
+        self.assertEqual(
+            find_removed_references({}, ["COFFEE_COFFEELINT", "PYTHON_RUFF"], []),
+            ["COFFEE_COFFEELINT"],
+        )
+        self.assertEqual(
+            find_removed_references({"COFFEE_COFFEELINT_ARGUMENTS": "-x"}, [], []),
+            ["COFFEE_COFFEELINT"],
+        )
+        self.assertEqual(
+            find_removed_references({}, [], ["COFFEE", "PYTHON"]),
+            ["COFFEE"],
+        )
+        for suffix in ("_FILTER_REGEX_EXCLUDE", "_PRE_COMMANDS"):
+            var_name = f"COFFEE{suffix}"
+            with self.subTest(variable=var_name):
+                self.assertEqual(
+                    find_removed_references({var_name: "x"}, [], []),
+                    ["COFFEE"],
+                )
+        for unrelated in ("COFFEE_HOME", "COFFEE_MACHINE"):
+            with self.subTest(variable=unrelated):
+                self.assertEqual(
+                    find_removed_references({unrelated: "x"}, [], []),
+                    [],
+                )
+        self.assertTrue(is_removed_related_variable("COFFEE_COFFEELINT_ARGUMENTS"))
+        self.assertTrue(is_removed_related_variable("COFFEE_FILTER_REGEX_EXCLUDE"))
+        self.assertTrue(is_removed_related_variable("COFFEE_PRE_COMMANDS"))
+
+    def test_v11_graphql_schema_linter(self):
+        self.assertEqual(
+            find_removed_references(
+                {}, ["GRAPHQL_GRAPHQL_SCHEMA_LINTER", "GRAPHQL_BIOME"], []
+            ),
+            ["GRAPHQL_GRAPHQL_SCHEMA_LINTER"],
+        )
+        self.assertEqual(
+            find_removed_references(
+                {"GRAPHQL_GRAPHQL_SCHEMA_LINTER_CONFIG_FILE": ".graphql-schema-linterrc"},
+                [],
+                [],
+            ),
+            ["GRAPHQL_GRAPHQL_SCHEMA_LINTER"],
+        )
+        self.assertTrue(
+            is_removed_related_variable("GRAPHQL_GRAPHQL_SCHEMA_LINTER_CONFIG_FILE")
+        )
+
+    def test_v11_repository_dustilock(self):
+        self.assertEqual(
+            find_removed_references({}, ["REPOSITORY_DUSTILOCK", "REPOSITORY_TRIVY"], []),
+            ["REPOSITORY_DUSTILOCK"],
+        )
+        self.assertEqual(
+            find_removed_references(
+                {"REPOSITORY_DUSTILOCK_DISABLE_ERRORS": "true"}, [], []
+            ),
+            ["REPOSITORY_DUSTILOCK"],
+        )
+        self.assertTrue(
+            is_removed_related_variable("REPOSITORY_DUSTILOCK_DISABLE_ERRORS")
+        )
+
+    def test_v11_typescript_standard(self):
+        self.assertEqual(
+            find_removed_references({}, ["TYPESCRIPT_STANDARD", "TYPESCRIPT_ES"], []),
+            ["TYPESCRIPT_STANDARD"],
+        )
+        self.assertEqual(
+            find_removed_references({"TYPESCRIPT_STANDARD_ARGUMENTS": "--fix"}, [], []),
+            ["TYPESCRIPT_STANDARD"],
+        )
+        self.assertTrue(is_removed_related_variable("TYPESCRIPT_STANDARD_ARGUMENTS"))
