@@ -22,7 +22,8 @@ Note: Can be used with `oxsecurity/megalinter@beta` in your GitHub Action mega-l
 
 - Removed linters
 
-  - **Removed 4 unmaintained linters** (`COFFEE_COFFEELINT`, `GRAPHQL_GRAPHQL_SCHEMA_LINTER`, `REPOSITORY_DUSTILOCK`, `TYPESCRIPT_STANDARD`) and the `COFFEE` descriptor — existing `.mega-linter.yml` files keep validating and ignore removed entries with a notice; see [Removed linters](https://megalinter.io/latest/removed-linters/) ([onemec/megalinter#7](https://github.com/onemec/megalinter/issues/7))
+  - **Removed 4 unmaintained linters** and the **`COFFEE`** descriptor ([onemec/megalinter#7](https://github.com/onemec/megalinter/issues/7))
+    - Existing `.mega-linter.yml` files keep validating and ignore removed entries with a notice; see [Removed linters](https://megalinter.io/latest/removed-linters/)
     - **`COFFEE_COFFEELINT`** (and the **`COFFEE`** descriptor): CoffeeScript tooling is discontinued and `coffeelint` cannot honor `EXCLUDED_DIRECTORIES`
     - **`GRAPHQL_GRAPHQL_SCHEMA_LINTER`**: unmaintained upstream; use **`GRAPHQL_BIOME`** instead
     - **`REPOSITORY_DUSTILOCK`**: unmaintained dependency-confusion scanner; use **`REPOSITORY_TRIVY`** or **`REPOSITORY_OSV_SCANNER`** instead

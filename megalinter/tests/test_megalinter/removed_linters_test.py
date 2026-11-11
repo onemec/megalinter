@@ -7,10 +7,12 @@ Unit tests for removed linters and descriptors detection
 import json
 import unittest
 from pathlib import Path
+from typing import Any
 
 import jsonschema
 
 from megalinter.removed_linters import (
+    DESCRIPTOR_VARIABLE_SUFFIXES,
     REMOVED_DESCRIPTORS,
     REMOVED_LINTERS,
     find_removed_references,
@@ -137,84 +139,68 @@ class removed_linters_test(unittest.TestCase):
             self.assertTrue(info["reason"], key)
             self.assertIn("replacement", info, key)
 
-    def test_v11_coffee_coffeelint_and_coffee_descriptor(self):
-        self.assertEqual(
-            find_removed_references({}, ["COFFEE_COFFEELINT", "PYTHON_RUFF"], []),
-            ["COFFEE_COFFEELINT"],
+    def _load_json_schema(self, path: Path) -> dict[str, Any]:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_v11_removed_linters(self) -> None:
+        cases = (
+            ("COFFEE_COFFEELINT", "PYTHON_RUFF", "COFFEE_COFFEELINT_ARGUMENTS", "-x"),
+            (
+                "GRAPHQL_GRAPHQL_SCHEMA_LINTER",
+                "GRAPHQL_BIOME",
+                "GRAPHQL_GRAPHQL_SCHEMA_LINTER_CONFIG_FILE",
+                ".graphql-schema-linterrc",
+            ),
+            (
+                "REPOSITORY_DUSTILOCK",
+                "REPOSITORY_TRIVY",
+                "REPOSITORY_DUSTILOCK_DISABLE_ERRORS",
+                "true",
+            ),
+            (
+                "TYPESCRIPT_STANDARD",
+                "TYPESCRIPT_ES",
+                "TYPESCRIPT_STANDARD_ARGUMENTS",
+                "--fix",
+            ),
         )
-        self.assertEqual(
-            find_removed_references({"COFFEE_COFFEELINT_ARGUMENTS": "-x"}, [], []),
-            ["COFFEE_COFFEELINT"],
-        )
+        for linter, active_linter, var_name, var_value in cases:
+            with self.subTest(linter=linter):
+                self.assertEqual(
+                    find_removed_references({}, [linter, active_linter], []),
+                    [linter],
+                )
+                self.assertEqual(
+                    find_removed_references({var_name: var_value}, [], []),
+                    [linter],
+                )
+                self.assertTrue(is_removed_related_variable(var_name))
+
+    def test_v11_coffee_descriptor(self) -> None:
         self.assertEqual(
             find_removed_references({}, [], ["COFFEE", "PYTHON"]),
             ["COFFEE"],
         )
-        for suffix in ("_FILTER_REGEX_EXCLUDE", "_PRE_COMMANDS"):
+        self.assertIn("_FILTER_REGEX_EXCLUDE", DESCRIPTOR_VARIABLE_SUFFIXES)
+        self.assertIn("_PRE_COMMANDS", DESCRIPTOR_VARIABLE_SUFFIXES)
+        for suffix in DESCRIPTOR_VARIABLE_SUFFIXES:
             var_name = f"COFFEE{suffix}"
             with self.subTest(variable=var_name):
                 self.assertEqual(
                     find_removed_references({var_name: "x"}, [], []),
                     ["COFFEE"],
                 )
+                self.assertTrue(is_removed_related_variable(var_name))
         for unrelated in ("COFFEE_HOME", "COFFEE_MACHINE"):
             with self.subTest(variable=unrelated):
                 self.assertEqual(
                     find_removed_references({unrelated: "x"}, [], []),
                     [],
                 )
-        self.assertTrue(is_removed_related_variable("COFFEE_COFFEELINT_ARGUMENTS"))
-        self.assertTrue(is_removed_related_variable("COFFEE_FILTER_REGEX_EXCLUDE"))
-        self.assertTrue(is_removed_related_variable("COFFEE_PRE_COMMANDS"))
 
-    def test_v11_graphql_schema_linter(self):
-        self.assertEqual(
-            find_removed_references(
-                {}, ["GRAPHQL_GRAPHQL_SCHEMA_LINTER", "GRAPHQL_BIOME"], []
-            ),
-            ["GRAPHQL_GRAPHQL_SCHEMA_LINTER"],
-        )
-        self.assertEqual(
-            find_removed_references(
-                {"GRAPHQL_GRAPHQL_SCHEMA_LINTER_CONFIG_FILE": ".graphql-schema-linterrc"},
-                [],
-                [],
-            ),
-            ["GRAPHQL_GRAPHQL_SCHEMA_LINTER"],
-        )
-        self.assertTrue(
-            is_removed_related_variable("GRAPHQL_GRAPHQL_SCHEMA_LINTER_CONFIG_FILE")
-        )
-
-    def test_v11_repository_dustilock(self):
-        self.assertEqual(
-            find_removed_references({}, ["REPOSITORY_DUSTILOCK", "REPOSITORY_TRIVY"], []),
-            ["REPOSITORY_DUSTILOCK"],
-        )
-        self.assertEqual(
-            find_removed_references(
-                {"REPOSITORY_DUSTILOCK_DISABLE_ERRORS": "true"}, [], []
-            ),
-            ["REPOSITORY_DUSTILOCK"],
-        )
-        self.assertTrue(
-            is_removed_related_variable("REPOSITORY_DUSTILOCK_DISABLE_ERRORS")
-        )
-
-    def test_v11_typescript_standard(self):
-        self.assertEqual(
-            find_removed_references({}, ["TYPESCRIPT_STANDARD", "TYPESCRIPT_ES"], []),
-            ["TYPESCRIPT_STANDARD"],
-        )
-        self.assertEqual(
-            find_removed_references({"TYPESCRIPT_STANDARD_ARGUMENTS": "--fix"}, [], []),
-            ["TYPESCRIPT_STANDARD"],
-        )
-        self.assertTrue(is_removed_related_variable("TYPESCRIPT_STANDARD_ARGUMENTS"))
-
-    def test_v11_removed_config_validates_against_schema(self):
-        with CONFIG_SCHEMA_PATH.open("r", encoding="utf-8") as f:
-            schema = json.load(f)
+    def test_v11_removed_config_validates_against_schema(self) -> None:
+        schema = self._load_json_schema(CONFIG_SCHEMA_PATH)
         config = {
             "ENABLE_LINTERS": list(V11_REMOVED_LINTERS),
             "ENABLE": list(V11_REMOVED_DESCRIPTORS),
@@ -226,9 +212,8 @@ class removed_linters_test(unittest.TestCase):
         }
         jsonschema.validate(instance=config, schema=schema)
 
-    def test_v11_removed_schema_properties_marked_deprecated(self):
-        with CONFIG_SCHEMA_PATH.open("r", encoding="utf-8") as f:
-            schema = json.load(f)
+    def test_v11_removed_schema_properties_marked_deprecated(self) -> None:
+        schema = self._load_json_schema(CONFIG_SCHEMA_PATH)
         props = schema["properties"]
         prefixes = V11_REMOVED_LINTERS + V11_REMOVED_DESCRIPTORS
         matched_counts = {prefix: 0 for prefix in prefixes}
@@ -251,11 +236,9 @@ class removed_linters_test(unittest.TestCase):
         for prefix, count in matched_counts.items():
             self.assertGreater(count, 0, f"No schema properties found for {prefix}")
 
-    def test_v11_removed_keys_retained_in_schema_enums(self):
-        with CONFIG_SCHEMA_PATH.open("r", encoding="utf-8") as f:
-            config_schema = json.load(f)
-        with CUSTOM_FLAVOR_SCHEMA_PATH.open("r", encoding="utf-8") as f:
-            flavor_schema = json.load(f)
+    def test_v11_removed_keys_retained_in_schema_enums(self) -> None:
+        config_schema = self._load_json_schema(CONFIG_SCHEMA_PATH)
+        flavor_schema = self._load_json_schema(CUSTOM_FLAVOR_SCHEMA_PATH)
 
         descriptor_enum = config_schema["definitions"]["enum_descriptor_keys"]["enum"]
         for descriptor in V11_REMOVED_DESCRIPTORS:
