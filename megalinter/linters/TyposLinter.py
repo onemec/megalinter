@@ -2,7 +2,7 @@
 
 import json
 
-from megalinter import Linter
+from megalinter import Linter, config
 
 
 class TyposLinter(Linter):
@@ -85,3 +85,8 @@ class TyposLinter(Linter):
 
     def get_total_number_warnings(self, stdout: str) -> int:
         return 0
+
+    def pre_test(self, test_name):
+        config.set_value(
+            self.request_id, "SPELL_TYPOS_FILE_EXTENSIONS", [".md", ".py", ".txt"]
+        )

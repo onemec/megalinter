@@ -159,9 +159,7 @@ class TyposLinterTest(unittest.TestCase):
                 ),
             ]
         )
-        with mock.patch.object(
-            Linter, "process_linter", return_value=(2, ndjson)
-        ):
+        with mock.patch.object(Linter, "process_linter", return_value=(2, ndjson)):
             rc, output = linter.process_linter()
         self.assertEqual(rc, 2)
         self.assertEqual(output, ndjson)
@@ -483,4 +481,18 @@ class TyposLinterTest(unittest.TestCase):
         self.assertEqual(linter_fail.status, "error")
         self.assertEqual(linter_fail.return_code, 1)
         self.assertEqual(linter_fail.total_number_errors, 1)
-        self.assertEqual(linter_fail.stdout_human, "./README.md:10:3: `adress` -> address")
+        self.assertEqual(
+            linter_fail.stdout_human, "./README.md:10:3: `adress` -> address"
+        )
+
+    def test_pre_test_sets_file_extensions(self):
+        linter = build_typos_linter(
+            self.request_id,
+            self.workspace,
+            self.report_folder,
+        )
+        linter.pre_test("test_success_list_of_files_lint_mode")
+        self.assertEqual(
+            config.get_list(self.request_id, "SPELL_TYPOS_FILE_EXTENSIONS", []),
+            [".md", ".py", ".txt"],
+        )
