@@ -4,7 +4,11 @@ Unit tests for removed linters and descriptors detection
 
 """
 
+import json
 import unittest
+from pathlib import Path
+
+import jsonschema
 
 from megalinter.removed_linters import (
     REMOVED_DESCRIPTORS,
@@ -12,6 +16,29 @@ from megalinter.removed_linters import (
     find_removed_references,
     is_removed_related_variable,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+CONFIG_SCHEMA_PATH = (
+    REPO_ROOT
+    / "megalinter"
+    / "descriptors"
+    / "schemas"
+    / "megalinter-configuration.jsonschema.json"
+)
+CUSTOM_FLAVOR_SCHEMA_PATH = (
+    REPO_ROOT
+    / "megalinter"
+    / "descriptors"
+    / "schemas"
+    / "megalinter-custom-flavor.jsonschema.json"
+)
+V11_REMOVED_LINTERS = (
+    "COFFEE_COFFEELINT",
+    "GRAPHQL_GRAPHQL_SCHEMA_LINTER",
+    "REPOSITORY_DUSTILOCK",
+    "TYPESCRIPT_STANDARD",
+)
+V11_REMOVED_DESCRIPTORS = ("COFFEE",)
 
 
 class removed_linters_test(unittest.TestCase):
@@ -184,3 +211,58 @@ class removed_linters_test(unittest.TestCase):
             ["TYPESCRIPT_STANDARD"],
         )
         self.assertTrue(is_removed_related_variable("TYPESCRIPT_STANDARD_ARGUMENTS"))
+
+    def test_v11_removed_config_validates_against_schema(self):
+        with CONFIG_SCHEMA_PATH.open("r", encoding="utf-8") as f:
+            schema = json.load(f)
+        config = {
+            "ENABLE_LINTERS": list(V11_REMOVED_LINTERS),
+            "ENABLE": list(V11_REMOVED_DESCRIPTORS),
+            "REPOSITORY_DUSTILOCK_ARGUMENTS": ["--verbose"],
+            "TYPESCRIPT_STANDARD_ARGUMENTS": ["--fix"],
+            "GRAPHQL_GRAPHQL_SCHEMA_LINTER_CONFIG_FILE": ".graphql-schema-linterrc",
+            "COFFEE_COFFEELINT_ARGUMENTS": ["--quiet"],
+            "COFFEE_FILTER_REGEX_EXCLUDE": "vendor/",
+        }
+        jsonschema.validate(instance=config, schema=schema)
+
+    def test_v11_removed_schema_properties_marked_deprecated(self):
+        with CONFIG_SCHEMA_PATH.open("r", encoding="utf-8") as f:
+            schema = json.load(f)
+        props = schema["properties"]
+        prefixes = V11_REMOVED_LINTERS + V11_REMOVED_DESCRIPTORS
+        matched_counts = {prefix: 0 for prefix in prefixes}
+        for prop_name, prop_schema in props.items():
+            matched_prefix = next(
+                (p for p in prefixes if prop_name == p or prop_name.startswith(f"{p}_")),
+                None,
+            )
+            if matched_prefix is None:
+                continue
+            self.assertTrue(is_removed_related_variable(prop_name), prop_name)
+            matched_counts[matched_prefix] += 1
+            with self.subTest(property=prop_name):
+                self.assertIs(prop_schema.get("deprecated"), True, prop_name)
+                title = prop_schema.get("title", "")
+                self.assertTrue(
+                    title.startswith("(deprecated) "),
+                    f"{prop_name} title missing '(deprecated) ' prefix: {title!r}",
+                )
+        for prefix, count in matched_counts.items():
+            self.assertGreater(count, 0, f"No schema properties found for {prefix}")
+
+    def test_v11_removed_keys_retained_in_schema_enums(self):
+        with CONFIG_SCHEMA_PATH.open("r", encoding="utf-8") as f:
+            config_schema = json.load(f)
+        with CUSTOM_FLAVOR_SCHEMA_PATH.open("r", encoding="utf-8") as f:
+            flavor_schema = json.load(f)
+
+        descriptor_enum = config_schema["definitions"]["enum_descriptor_keys"]["enum"]
+        for descriptor in V11_REMOVED_DESCRIPTORS:
+            self.assertIn(descriptor, descriptor_enum)
+
+        config_linter_enum = config_schema["definitions"]["enum_linter_keys"]["enum"]
+        flavor_linter_enum = flavor_schema["definitions"]["enum_linter_keys"]["enum"]
+        for linter in V11_REMOVED_LINTERS:
+            self.assertIn(linter, config_linter_enum)
+            self.assertIn(linter, flavor_linter_enum)
