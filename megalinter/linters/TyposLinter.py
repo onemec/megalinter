@@ -7,7 +7,7 @@ from megalinter import Linter, config
 
 class TyposLinter(Linter):
     @staticmethod
-    def _parse_typo_events(stdout: str) -> list[dict]:
+    def _parse_typo_events(stdout: str | None) -> list[dict]:
         if not stdout:
             return []
         events = []
@@ -41,10 +41,13 @@ class TyposLinter(Linter):
     def _format_typo_events(self, typos: list[dict]) -> str:
         return "\n".join(self._format_typo_event(event) for event in typos)
 
-    def process_linter(self, file=None):
+    def _parse_and_format_typos(self, stdout: str) -> tuple[list[dict], str]:
+        typos = self._parse_typo_events(stdout)
+        return typos, self._format_typo_events(typos)
+
+    def process_linter(self, file: str | None = None) -> tuple[int, str]:
         return_code, return_output = super().process_linter(file)
-        typos = self._parse_typo_events(return_output)
-        formatted = self._format_typo_events(typos)
+        _, formatted = self._parse_and_format_typos(return_output)
         if file is not None or self.cli_lint_mode == "file":
             if formatted:
                 self.stdout_human = (
@@ -54,24 +57,22 @@ class TyposLinter(Linter):
                 )
         else:
             self.stdout_human = formatted if formatted else None
-        if self.apply_fixes is True and return_code == 2 and len(typos) == 0:
-            return_code = 0
         return return_code, return_output
 
     def update_files_lint_results(
         self,
-        linted_files,
-        return_code,
-        file_status,
-        stdout,
-        file_errors_number,
-        file_warnings_number,
-    ):
+        linted_files: list[str],
+        return_code: int | None,
+        file_status: str | None,
+        stdout: str | None,
+        file_errors_number: int | None,
+        file_warnings_number: int | None,
+    ) -> None:
         if stdout:
-            formatted = self._format_typo_events(self._parse_typo_events(stdout))
+            _, formatted = self._parse_and_format_typos(stdout)
             if formatted:
                 stdout = formatted
-        return super().update_files_lint_results(
+        super().update_files_lint_results(
             linted_files,
             return_code,
             file_status,
@@ -80,13 +81,13 @@ class TyposLinter(Linter):
             file_warnings_number,
         )
 
-    def get_total_number_errors(self, stdout: str) -> int:
+    def get_total_number_errors(self, stdout: str | None) -> int:
         return len(self._parse_typo_events(stdout))
 
-    def get_total_number_warnings(self, stdout: str) -> int:
+    def get_total_number_warnings(self, stdout: str | None) -> int:
         return 0
 
-    def pre_test(self, test_name):
+    def pre_test(self, test_name: str) -> None:
         config.set_value(
             self.request_id, "SPELL_TYPOS_FILE_EXTENSIONS", [".md", ".py", ".txt"]
         )

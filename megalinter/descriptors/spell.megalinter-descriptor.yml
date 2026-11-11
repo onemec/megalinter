@@ -96,6 +96,14 @@ linters:
       - **Security Awareness**: Identifies sensitive information like credit card numbers and passwords in text
       - **Rich Output Formats**: Provides detailed suggestions with source attribution, severity levels, and potential replacements
       - **Extensible Configuration**: Fully customizable checks through JSON configuration files
+
+      ### Migration Guide
+
+      `SPELL_PROSELINT` is deprecated and will be removed in a future major release. Replace it with `SPELL_VALE` for prose style linting and `SPELL_TYPOS` for fast source-code spell checking:
+
+      - **Editorial and prose style linting (`SPELL_VALE`)**: Replace `.proselintrc.json` with a `.vale.ini` configuration file and install community prose style packages (such as `write-good`, `Google`, or `Microsoft`) via `vale sync`.
+      - **Fast source-code spell checking (`SPELL_TYPOS`)**: Enable `SPELL_TYPOS` (configured via `typos.toml`, `_typos.toml`, `.typos.toml`, `pyproject.toml`, or `Cargo.toml`) to catch unambiguous misspellings across source files, comments, and documentation with `--write-changes` auto-fix support.
+      - **Disable `SPELL_PROSELINT`**: Remove `.proselintrc.json` once migrated, or add `DISABLE_LINTERS: [SPELL_PROSELINT]` to your `.mega-linter.yml` configuration.
     linter_speed: 2
     linter_url: https://github.com/amperser/proselint
     linter_repo: https://github.com/amperser/proselint
