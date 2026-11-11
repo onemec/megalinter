@@ -4,12 +4,11 @@ Unit tests for removed linters and descriptors detection
 
 """
 
+import importlib.util
 import json
 import unittest
 from pathlib import Path
 from typing import Any
-
-import jsonschema
 
 from megalinter.removed_linters import (
     DESCRIPTOR_VARIABLE_SUFFIXES,
@@ -200,6 +199,10 @@ class removed_linters_test(unittest.TestCase):
                 )
 
     def test_v11_removed_config_validates_against_schema(self) -> None:
+        if importlib.util.find_spec("jsonschema") is None:
+            raise unittest.SkipTest("jsonschema is not installed")
+        import jsonschema
+
         schema = self._load_json_schema(CONFIG_SCHEMA_PATH)
         config = {
             "ENABLE_LINTERS": list(V11_REMOVED_LINTERS),
@@ -219,7 +222,11 @@ class removed_linters_test(unittest.TestCase):
         matched_counts = {prefix: 0 for prefix in prefixes}
         for prop_name, prop_schema in props.items():
             matched_prefix = next(
-                (p for p in prefixes if prop_name == p or prop_name.startswith(f"{p}_")),
+                (
+                    p
+                    for p in prefixes
+                    if prop_name == p or prop_name.startswith(f"{p}_")
+                ),
                 None,
             )
             if matched_prefix is None:
