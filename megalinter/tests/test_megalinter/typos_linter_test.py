@@ -2,13 +2,14 @@
 
 import json
 import os
+import shutil
 import tempfile
 import types
 import unittest
 import uuid
 from unittest import mock
 
-from megalinter import Linter, config
+from megalinter import Linter, Megalinter, config
 from megalinter.linters.TyposLinter import TyposLinter
 from megalinter.reporters.ApiReporter import ApiReporter
 
@@ -19,6 +20,7 @@ def build_typos_linter(
     report_folder,
     cli_lint_mode="list_of_files",
     apply_fixes=False,
+    is_formatter=True,
 ):
     linter_config = {
         "descriptor_id": "SPELL",
@@ -26,6 +28,7 @@ def build_typos_linter(
         "name": "SPELL_TYPOS",
         "linter_name": "typos",
         "linter_url": "https://github.com/crate-ci/typos",
+        "is_formatter": is_formatter,
         "cli_lint_mode": cli_lint_mode,
         "supported_cli_lint_modes": ["file", "list_of_files", "project"],
         "cli_lint_extra_args": ["--format", "json"],
@@ -240,7 +243,7 @@ class TyposLinterTest(unittest.TestCase):
             return_value=(2, json.dumps({"type": "binary_file", "path": "./bin.dat"})),
         ):
             rc, _ = linter_fix.process_linter()
-        self.assertEqual(rc, 0)
+        self.assertEqual(rc, 2)
         self.assertIsNone(linter_fix.stdout_human)
 
         remaining_ndjson = json.dumps(
@@ -293,23 +296,51 @@ class TyposLinterTest(unittest.TestCase):
         reporter.providers = []
         return reporter
 
-    def test_run_list_of_files_with_reporters(self):
-        config.set_config(
-            self.request_id,
-            {
-                "REPORT_OUTPUT_FOLDER": self.report_folder,
-                "TEXT_REPORTER": "true",
-                "CONSOLE_REPORTER": "true",
-            },
-        )
-        linter = build_typos_linter(
-            self.request_id,
-            self.workspace,
+    def _configure_reporters(self, formatters_disable_errors=None):
+        reporter_config = {
+            "REPORT_OUTPUT_FOLDER": self.report_folder,
+            "TEXT_REPORTER": "true",
+            "CONSOLE_REPORTER": "true",
+        }
+        if formatters_disable_errors is not None:
+            reporter_config["FORMATTERS_DISABLE_ERRORS"] = formatters_disable_errors
+        config.set_config(self.request_id, reporter_config)
+
+    def _assert_reporter_outputs(
+        self,
+        linter,
+        expected_human,
+        expected_status,
+        expected_return_code,
+        expected_errors,
+        expected_file_results_count,
+    ):
+        self.assertEqual(linter.status, expected_status)
+        self.assertEqual(linter.return_code, expected_return_code)
+        self.assertEqual(linter.total_number_errors, expected_errors)
+        self.assertEqual(linter.total_number_warnings, 0)
+        self.assertEqual(linter.stdout_human, expected_human)
+        self.assertEqual(len(linter.files_lint_results), expected_file_results_count)
+
+        text_log = os.path.join(
             self.report_folder,
-            cli_lint_mode="list_of_files",
+            "linters_logs",
+            f"SPELL_TYPOS-{expected_status.upper()}.log",
         )
-        file_a = os.path.join(self.workspace, "a.py")
-        linter.files = [file_a]
+        with open(text_log, "r", encoding="utf-8") as handle:
+            text_content = handle.read()
+        for line in expected_human.splitlines():
+            self.assertIn(line, text_content)
+        self.assertNotIn('"type":"typo"', text_content)
+        self.assertNotIn('"type": "typo"', text_content)
+
+        api_reporter = self._build_api_reporter(linter)
+        api_reporter.build_payload()
+        api_data = api_reporter.payload["linters"][0]["data"]
+        self.assertEqual(api_data["numberErrorsFound"], expected_errors)
+        self.assertEqual(api_data["output"], expected_human)
+
+    def test_run_list_of_files_with_reporters(self):
         ndjson = "\n".join(
             [
                 json.dumps({"type": "binary_file", "path": "./bin.dat"}),
@@ -335,54 +366,42 @@ class TyposLinterTest(unittest.TestCase):
                 ),
             ]
         )
-        with mock.patch.object(
-            linter, "_run_lint_subprocess", return_value=(2, ndjson)
-        ):
-            with self.assertLogs(level="INFO") as captured_logs:
-                linter.run()
-
         expected_human = "./a.py:1:2: `teh` -> the\n./a.py:5:0: `recieve` -> receive"
-        self.assertEqual(linter.status, "error")
-        self.assertEqual(linter.return_code, 1)
-        self.assertEqual(linter.total_number_errors, 2)
-        self.assertEqual(linter.total_number_warnings, 0)
-        self.assertEqual(linter.stdout, ndjson)
-        self.assertEqual(linter.stdout_human, expected_human)
-        self.assertEqual(len(linter.files_lint_results), 1)
-        self.assertIn(expected_human, "\n".join(captured_logs.output))
+        file_a = os.path.join(self.workspace, "a.py")
 
-        text_log = os.path.join(
-            self.report_folder, "linters_logs", "SPELL_TYPOS-ERROR.log"
-        )
-        with open(text_log, "r", encoding="utf-8") as handle:
-            text_content = handle.read()
-        self.assertIn(expected_human, text_content)
-        self.assertNotIn('"type":"typo"', text_content)
+        for formatters_disable_errors, expected_status, expected_rc in [
+            (None, "warning", 0),
+            ("false", "error", 1),
+        ]:
+            with self.subTest(formatters_disable_errors=formatters_disable_errors):
+                self._configure_reporters(formatters_disable_errors)
+                linter = build_typos_linter(
+                    self.request_id,
+                    self.workspace,
+                    self.report_folder,
+                    cli_lint_mode="list_of_files",
+                )
+                linter.files = [file_a]
+                with mock.patch.object(
+                    linter, "_run_lint_subprocess", return_value=(2, ndjson)
+                ):
+                    with self.assertLogs(level="INFO") as captured_logs:
+                        linter.run()
 
-        api_reporter = self._build_api_reporter(linter)
-        api_reporter.build_payload()
-        api_data = api_reporter.payload["linters"][0]["data"]
-        self.assertEqual(api_data["numberErrorsFound"], 2)
-        self.assertEqual(api_data["output"], expected_human)
+                self.assertEqual(linter.stdout, ndjson)
+                self.assertIn(expected_human, "\n".join(captured_logs.output))
+                self._assert_reporter_outputs(
+                    linter=linter,
+                    expected_human=expected_human,
+                    expected_status=expected_status,
+                    expected_return_code=expected_rc,
+                    expected_errors=2,
+                    expected_file_results_count=1,
+                )
 
     def test_run_file_mode_with_reporters(self):
-        config.set_config(
-            self.request_id,
-            {
-                "REPORT_OUTPUT_FOLDER": self.report_folder,
-                "TEXT_REPORTER": "true",
-                "CONSOLE_REPORTER": "true",
-            },
-        )
-        linter = build_typos_linter(
-            self.request_id,
-            self.workspace,
-            self.report_folder,
-            cli_lint_mode="file",
-        )
         good_file = os.path.join(self.workspace, "good.txt")
         bad_file = os.path.join(self.workspace, "bad.txt")
-        linter.files = [good_file, bad_file]
         bad_ndjson = "\n".join(
             [
                 json.dumps(
@@ -407,40 +426,41 @@ class TyposLinterTest(unittest.TestCase):
                 ),
             ]
         )
-        with mock.patch.object(
-            linter,
-            "_run_lint_subprocess",
-            side_effect=[(0, ""), (2, bad_ndjson)],
-        ):
-            linter.run()
-
         expected_human = (
             f"{bad_file}:1:0: `teh` -> the\n{bad_file}:2:4: `seperate` -> separate"
         )
-        self.assertEqual(linter.status, "error")
-        self.assertEqual(linter.return_code, 1)
-        self.assertEqual(linter.total_number_errors, 2)
-        self.assertEqual(linter.total_number_warnings, 0)
-        self.assertEqual(linter.stdout_human, expected_human)
-        self.assertEqual(len(linter.files_lint_results), 2)
-        self.assertEqual(linter.files_lint_results[0]["status_code"], 0)
-        self.assertEqual(linter.files_lint_results[1]["errors_number"], 2)
-        self.assertEqual(linter.files_lint_results[1]["stdout"], expected_human)
 
-        text_log = os.path.join(
-            self.report_folder, "linters_logs", "SPELL_TYPOS-ERROR.log"
-        )
-        with open(text_log, "r", encoding="utf-8") as handle:
-            text_content = handle.read()
-        for line in expected_human.splitlines():
-            self.assertIn(line, text_content)
-        self.assertNotIn('"type": "typo"', text_content)
+        for formatters_disable_errors, expected_status, expected_rc in [
+            (None, "warning", 0),
+            ("false", "error", 1),
+        ]:
+            with self.subTest(formatters_disable_errors=formatters_disable_errors):
+                self._configure_reporters(formatters_disable_errors)
+                linter = build_typos_linter(
+                    self.request_id,
+                    self.workspace,
+                    self.report_folder,
+                    cli_lint_mode="file",
+                )
+                linter.files = [good_file, bad_file]
+                with mock.patch.object(
+                    linter,
+                    "_run_lint_subprocess",
+                    side_effect=[(0, ""), (2, bad_ndjson)],
+                ):
+                    linter.run()
 
-        api_reporter = self._build_api_reporter(linter)
-        api_reporter.build_payload()
-        api_data = api_reporter.payload["linters"][0]["data"]
-        self.assertEqual(api_data["numberErrorsFound"], 2)
-        self.assertEqual(api_data["output"], expected_human)
+                self.assertEqual(linter.files_lint_results[0]["status_code"], 0)
+                self.assertEqual(linter.files_lint_results[1]["errors_number"], 2)
+                self.assertEqual(linter.files_lint_results[1]["stdout"], expected_human)
+                self._assert_reporter_outputs(
+                    linter=linter,
+                    expected_human=expected_human,
+                    expected_status=expected_status,
+                    expected_return_code=expected_rc,
+                    expected_errors=2,
+                    expected_file_results_count=2,
+                )
 
     def test_run_project_mode_clean_and_failing(self):
         linter_clean = build_typos_linter(
@@ -458,12 +478,6 @@ class TyposLinterTest(unittest.TestCase):
         self.assertEqual(linter_clean.total_number_errors, 0)
         self.assertIsNone(linter_clean.stdout_human)
 
-        linter_fail = build_typos_linter(
-            self.request_id,
-            self.workspace,
-            self.report_folder,
-            cli_lint_mode="project",
-        )
         ndjson = json.dumps(
             {
                 "type": "typo",
@@ -474,16 +488,31 @@ class TyposLinterTest(unittest.TestCase):
                 "corrections": ["address"],
             }
         )
-        with mock.patch.object(
-            linter_fail, "_run_lint_subprocess", return_value=(2, ndjson)
-        ):
-            linter_fail.run()
-        self.assertEqual(linter_fail.status, "error")
-        self.assertEqual(linter_fail.return_code, 1)
-        self.assertEqual(linter_fail.total_number_errors, 1)
-        self.assertEqual(
-            linter_fail.stdout_human, "./README.md:10:3: `adress` -> address"
-        )
+        for formatters_disable_errors, expected_status, expected_rc in [
+            (None, "warning", 0),
+            ("false", "error", 1),
+        ]:
+            with self.subTest(formatters_disable_errors=formatters_disable_errors):
+                cfg = {"REPORT_OUTPUT_FOLDER": "none"}
+                if formatters_disable_errors is not None:
+                    cfg["FORMATTERS_DISABLE_ERRORS"] = formatters_disable_errors
+                config.set_config(self.request_id, cfg)
+                linter_fail = build_typos_linter(
+                    self.request_id,
+                    self.workspace,
+                    self.report_folder,
+                    cli_lint_mode="project",
+                )
+                with mock.patch.object(
+                    linter_fail, "_run_lint_subprocess", return_value=(2, ndjson)
+                ):
+                    linter_fail.run()
+                self.assertEqual(linter_fail.status, expected_status)
+                self.assertEqual(linter_fail.return_code, expected_rc)
+                self.assertEqual(linter_fail.total_number_errors, 1)
+                self.assertEqual(
+                    linter_fail.stdout_human, "./README.md:10:3: `adress` -> address"
+                )
 
     def test_pre_test_sets_file_extensions(self):
         linter = build_typos_linter(
@@ -496,3 +525,61 @@ class TyposLinterTest(unittest.TestCase):
             config.get_list(self.request_id, "SPELL_TYPOS_FILE_EXTENSIONS", []),
             [".md", ".py", ".txt"],
         )
+
+    def test_apply_fixes_all_end_to_end(self):
+        if shutil.which("typos") is None:
+            self.skipTest("typos binary not available on PATH")
+
+        target_file = os.path.join(self.workspace, "guide.md")
+        with open(target_file, "w", encoding="utf-8") as handle:
+            handle.write(
+                "Follow teh checklist to recieve updates in a seperate environment.\n"
+            )
+
+        e2e_request_id = f"test-typos-e2e-{uuid.uuid4()}"
+        self.addCleanup(
+            lambda: (
+                config.delete(e2e_request_id)
+                if config.is_initialized_for(e2e_request_id)
+                else None
+            )
+        )
+        config.init_config(
+            e2e_request_id,
+            self.workspace,
+            {
+                "DEFAULT_WORKSPACE": self.workspace,
+                "GITHUB_WORKSPACE": self.workspace,
+                "ENABLE_LINTERS": "SPELL_TYPOS",
+                "APPLY_FIXES": "all",
+                "SPELL_TYPOS_FILE_EXTENSIONS": [".md"],
+                "PARALLEL": "false",
+                "IGNORE_GITIGNORED_FILES": "false",
+                "VALIDATE_ALL_CODEBASE": "true",
+                "REPORT_OUTPUT_FOLDER": "none",
+                "TEXT_REPORTER": "false",
+                "CONSOLE_REPORTER": "false",
+                "GITHUB_COMMENT_REPORTER": "false",
+                "GITHUB_STATUS_REPORTER": "false",
+                "CONFIG_REPORTER": "false",
+                "API_REPORTER": "false",
+                "SARIF_REPORTER": "false",
+                "UPDATED_SOURCES_REPORTER": "false",
+                "FLAVOR_SUGGESTIONS": "false",
+            },
+        )
+        mega_linter = Megalinter(
+            {"request_id": e2e_request_id, "workspace": self.workspace}
+        )
+        mega_linter.run()
+
+        self.assertEqual(mega_linter.return_code, 0)
+        active_linters = [
+            linter for linter in mega_linter.linters if linter.is_active is True
+        ]
+        self.assertEqual([linter.name for linter in active_linters], ["SPELL_TYPOS"])
+        with open(target_file, "r", encoding="utf-8") as handle:
+            self.assertEqual(
+                handle.read(),
+                "Follow the checklist to receive updates in a separate environment.\n",
+            )

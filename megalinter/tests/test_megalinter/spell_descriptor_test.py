@@ -200,3 +200,54 @@ class SpellDescriptorTest(unittest.TestCase):
                     "",
                     "Expected blank line before bulleted list in linter_text",
                 )
+
+    def test_spell_proselint_linter_text_has_zensical_migration_guide(self):
+        descriptor_path = os.path.join(
+            REPO_ROOT, "megalinter", "descriptors", "spell.megalinter-descriptor.yml"
+        )
+        with open(descriptor_path, "r", encoding="utf-8") as f:
+            descriptor = yaml.safe_load(f)
+
+        proselint = next(
+            item
+            for item in descriptor["linters"]
+            if item.get("linter_name") == "proselint"
+        )
+        linter_text = proselint["linter_text"]
+        self.assertIn("Migration Guide", linter_text)
+        self.assertIn(".proselintrc.json", linter_text)
+        self.assertIn("SPELL_VALE", linter_text)
+        self.assertIn(".vale.ini", linter_text)
+        self.assertIn("SPELL_TYPOS", linter_text)
+        self.assertIn("DISABLE_LINTERS", linter_text)
+        self.assertIn("SPELL_PROSELINT", linter_text)
+
+        lines = linter_text.splitlines()
+        for idx, line in enumerate(lines):
+            if line.startswith("#") and idx + 1 < len(lines):
+                self.assertEqual(
+                    lines[idx + 1],
+                    "",
+                    f"Expected blank line after heading {line!r} in SPELL_PROSELINT linter_text",
+                )
+            if (
+                line.startswith("- ")
+                and idx > 0
+                and not lines[idx - 1].startswith("- ")
+            ):
+                self.assertEqual(
+                    lines[idx - 1],
+                    "",
+                    "Expected blank line before bulleted list in SPELL_PROSELINT linter_text",
+                )
+            if (
+                line.startswith("- ")
+                and idx + 1 < len(lines)
+                and not lines[idx + 1].startswith("- ")
+                and not lines[idx + 1].startswith("  ")
+            ):
+                self.assertEqual(
+                    lines[idx + 1],
+                    "",
+                    "Expected blank line after bulleted list in SPELL_PROSELINT linter_text",
+                )
