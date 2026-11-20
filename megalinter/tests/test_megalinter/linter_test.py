@@ -911,17 +911,25 @@ runs:
             expected_order = [
                 "ruff",
                 "ruff-format",
+                "ty",
                 "pylint",
                 "mypy",
                 "nbqa",
                 "pyright",
-                "ty",
                 "black",
                 "flake8",
                 "isort",
                 "bandit",
             ]
             self.assertEqual(linter_names, expected_order)
+            self.assertEqual(linter_names[:3], ["ruff", "ruff-format", "ty"])
+
+            # Check ty is included in cupcake and python flavors
+            ty_linter = linter_factory.build_linter(
+                "PYTHON", "ty", {**base_params, "request_id": req_id}
+            )
+            self.assertIn("cupcake", getattr(ty_linter, "descriptor_flavors", []))
+            self.assertIn("python", getattr(ty_linter, "descriptor_flavors", []))
 
             # Check cupcake flavor exclusions
             linters_by_name = {l["linter_name"]: l for l in descriptor_info["linters"]}
