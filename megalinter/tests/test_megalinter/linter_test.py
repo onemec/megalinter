@@ -19,7 +19,7 @@ import unittest
 import uuid
 from unittest import mock
 
-from megalinter import config, linter_factory, utils, utilstest
+from megalinter import config, flavor_factory, linter_factory, utils, utilstest
 from megalinter.Linter import MAX_PROJECT_EXCLUDE_ARG_BYTES, Linter
 from megalinter.linters.JsCpdLinter import JsCpdLinter
 from megalinter.linters.StyleLintLinter import StyleLintLinter
@@ -970,6 +970,249 @@ runs:
                     getattr(linter, "descriptor_flavors_exclude", []),
                     f"{name} should not exclude cupcake flavor",
                 )
+        finally:
+            config.delete(req_id)
+
+    def test_python_unified_astral_toolchain_profile(self):
+        """Comprehensively verify the unified Astral toolchain profile (#24, #8)."""
+        base_params = self.build_activation_params([], [], "ENABLE")
+        req_id = str(uuid.uuid1())
+        config.init_config(req_id, None, {})
+        try:
+            descriptor_file = os.path.join(
+                utils.get_descriptor_dir(), "python.megalinter-descriptor.yml"
+            )
+            descriptor_info = linter_factory.build_descriptor_info(descriptor_file)
+            linters = descriptor_info["linters"]
+            linter_names = [l["linter_name"] for l in linters]
+            linters_by_name = {l["linter_name"]: l for l in linters}
+
+            # 1. Unified Astral toolchain ordering: ruff, ruff-format, ty, followed by pylint
+            expected_active_order = ["ruff", "ruff-format", "ty", "pylint"]
+            self.assertEqual(
+                linter_names[:4],
+                expected_active_order,
+                "Unified Astral toolchain profile must order ruff, ruff-format, ty, and pylint first",
+            )
+            expected_full_order = [
+                "ruff",
+                "ruff-format",
+                "ty",
+                "pylint",
+                "mypy",
+                "pyright",
+                "nbqa",
+                "black",
+                "flake8",
+                "isort",
+                "bandit",
+            ]
+            self.assertEqual(
+                linter_names,
+                expected_full_order,
+                f"Python linters must be ordered: {expected_full_order}",
+            )
+
+            # 2. All legacy tools (black, flake8, isort, bandit, mypy, pyright, nbqa) are marked
+            #    deprecated: True with corresponding migration guidance:
+            #    - black -> PYTHON_RUFF_FORMAT
+            #    - flake8, isort, bandit -> ruff check --select E,F,W,I,S
+            #    - mypy, pyright, nbqa -> PYTHON_TY
+            legacy_ruff_format = ["black"]
+            legacy_ruff_check = ["flake8", "isort", "bandit"]
+            legacy_ty = ["mypy", "pyright", "nbqa"]
+            all_legacy = legacy_ruff_format + legacy_ruff_check + legacy_ty
+
+            for name in all_legacy:
+                linter_def = linters_by_name[name]
+                self.assertTrue(
+                    linter_def.get("deprecated", False),
+                    f"{name} must have deprecated: true in descriptor",
+                )
+                linter_obj = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertTrue(
+                    getattr(linter_obj, "deprecated", False),
+                    f"{name} instance must have deprecated: True",
+                )
+
+            for name in legacy_ruff_format:
+                desc = linters_by_name[name].get("deprecated_description", "")
+                self.assertIn(
+                    "PYTHON_RUFF_FORMAT",
+                    desc,
+                    f"{name} migration guidance must reference PYTHON_RUFF_FORMAT",
+                )
+
+            for name in legacy_ruff_check:
+                desc = linters_by_name[name].get("deprecated_description", "")
+                self.assertIn(
+                    "ruff check --select E,F,W,I,S",
+                    desc,
+                    f"{name} migration guidance must reference 'ruff check --select E,F,W,I,S'",
+                )
+
+            for name in legacy_ty:
+                desc = linters_by_name[name].get("deprecated_description", "")
+                self.assertIn(
+                    "PYTHON_TY",
+                    desc,
+                    f"{name} migration guidance must reference PYTHON_TY",
+                )
+
+            # 3. None of ruff, ruff-format, ty, or pylint are marked deprecated
+            for name in ["ruff", "ruff-format", "ty", "pylint"]:
+                linter_def = linters_by_name[name]
+                self.assertFalse(
+                    linter_def.get("deprecated", False),
+                    f"{name} must NOT be deprecated in descriptor",
+                )
+                linter_obj = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertFalse(
+                    getattr(linter_obj, "deprecated", False),
+                    f"{name} instance must NOT be deprecated",
+                )
+
+            # 4. cupcake flavor contains exactly ruff, ruff-format, ty, and pylint for the Python descriptor,
+            #    and excludes all 7 deprecated tools.
+            cupcake_linters = flavor_factory.list_flavor_linters("cupcake")
+            cupcake_python_linters = [
+                l for l in cupcake_linters if l.startswith("PYTHON_")
+            ]
+            expected_cupcake_python = [
+                "PYTHON_RUFF",
+                "PYTHON_RUFF_FORMAT",
+                "PYTHON_TY",
+                "PYTHON_PYLINT",
+            ]
+            self.assertEqual(
+                cupcake_python_linters,
+                expected_cupcake_python,
+                "cupcake flavor must contain exactly ruff, ruff-format, ty, and pylint for Python",
+            )
+            # Check descriptor-level flavor declarations on built linters
+            for name in ["ruff", "ruff-format", "ty", "pylint"]:
+                linter_obj = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertIn(
+                    "cupcake",
+                    getattr(linter_obj, "descriptor_flavors", []),
+                    f"{name} must include cupcake in descriptor_flavors",
+                )
+                self.assertNotIn(
+                    "cupcake",
+                    getattr(linter_obj, "descriptor_flavors_exclude", []),
+                    f"{name} must not exclude cupcake in descriptor_flavors_exclude",
+                )
+            for name in ["mypy", "pyright", "nbqa", "black", "flake8", "isort"]:
+                linter_obj = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertIn(
+                    "cupcake",
+                    getattr(linter_obj, "descriptor_flavors_exclude", []),
+                    f"{name} must exclude cupcake in descriptor_flavors_exclude",
+                )
+            bandit_obj = linter_factory.build_linter(
+                "PYTHON", "bandit", {**base_params, "request_id": req_id}
+            )
+            self.assertNotIn(
+                "cupcake",
+                getattr(bandit_obj, "descriptor_flavors", []),
+                "bandit must not include cupcake in descriptor_flavors",
+            )
+            # Verify none of the 7 legacy linters are present in cupcake flavor
+            for name in all_legacy:
+                canonical_name = linters_by_name[name]["name"]
+                self.assertNotIn(
+                    canonical_name,
+                    cupcake_python_linters,
+                    f"Deprecated linter {canonical_name} must not be in cupcake flavor",
+                )
+
+            # 5. python flavor contains all Python linters (retaining legacy tools for smooth migration)
+            python_flavor_linters = flavor_factory.list_flavor_linters("python")
+            python_flavor_python = [
+                l for l in python_flavor_linters if l.startswith("PYTHON_")
+            ]
+            expected_python_flavor = [
+                linters_by_name[name]["name"] for name in expected_full_order
+            ]
+            self.assertEqual(
+                python_flavor_python,
+                expected_python_flavor,
+                "python flavor must contain all Python linters (including legacy tools)",
+            )
+            for name in expected_full_order:
+                linter_obj = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertIn(
+                    "python",
+                    getattr(linter_obj, "descriptor_flavors", []),
+                    f"{name} must include python in descriptor_flavors",
+                )
+
+            # 6. PYTHON_DEFAULT_STYLE defaults to ruff
+            self.assertEqual(
+                config.get(req_id, "PYTHON_DEFAULT_STYLE", "ruff"),
+                "ruff",
+                "PYTHON_DEFAULT_STYLE must default to 'ruff'",
+            )
+            # Activation rule default_value in descriptor
+            ruff_format_rules = linters_by_name["ruff-format"].get(
+                "activation_rules", []
+            )
+            style_rule = next(
+                (
+                    r
+                    for r in ruff_format_rules
+                    if r.get("variable") == "PYTHON_DEFAULT_STYLE"
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                style_rule,
+                "ruff-format must have PYTHON_DEFAULT_STYLE activation rule",
+            )
+            self.assertEqual(style_rule.get("default_value"), "ruff")
+            self.assertEqual(style_rule.get("expected_value"), "ruff")
+
+            black_rules = linters_by_name["black"].get("activation_rules", [])
+            black_style_rule = next(
+                (
+                    r
+                    for r in black_rules
+                    if r.get("variable") == "PYTHON_DEFAULT_STYLE"
+                ),
+                None,
+            )
+            self.assertIsNotNone(
+                black_style_rule,
+                "black must have PYTHON_DEFAULT_STYLE activation rule",
+            )
+            self.assertEqual(black_style_rule.get("default_value"), "ruff")
+            self.assertEqual(black_style_rule.get("expected_value"), "black")
+
+            # In default config (no explicit PYTHON_DEFAULT_STYLE), ruff-format is active, black is inactive
+            ruff_format_linter = linter_factory.build_linter(
+                "PYTHON", "ruff-format", {**base_params, "request_id": req_id}
+            )
+            black_linter = linter_factory.build_linter(
+                "PYTHON", "black", {**base_params, "request_id": req_id}
+            )
+            self.assertTrue(
+                ruff_format_linter.is_active,
+                "ruff-format must be active by default when PYTHON_DEFAULT_STYLE is not explicitly set",
+            )
+            self.assertFalse(
+                black_linter.is_active,
+                "black must be inactive by default when PYTHON_DEFAULT_STYLE is not explicitly set",
+            )
         finally:
             config.delete(req_id)
 
