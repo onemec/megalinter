@@ -1159,10 +1159,11 @@ runs:
             config.delete(req_id)
 
     def test_python_ruff_default_rules(self):
-        root_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..", "..")
-        )
-        template_path = os.path.join(root_dir, "TEMPLATES", ".ruff.toml")
+        root_dir = utilstest.get_root_dir()
+        rules_dir = utils.get_default_rules_location()
+        template_path = os.path.join(rules_dir, ".ruff.toml")
+        if not os.path.isfile(template_path):
+            template_path = os.path.join(root_dir, "TEMPLATES", ".ruff.toml")
         self.assertTrue(os.path.isfile(template_path), f"Missing {template_path}")
 
         with open(template_path, "rb") as f:
