@@ -871,25 +871,19 @@ runs:
             linter_names = [item["linter_name"] for item in linters]
             linters_by_name = {item["linter_name"]: item for item in linters}
 
-            # 1. Unified Astral toolchain ordering: ruff, ruff-format, ty
-            expected_active_order = ["ruff", "ruff-format", "ty"]
-            self.assertEqual(
-                linter_names[:3],
-                expected_active_order,
-                "Unified Astral toolchain profile must order ruff, ruff-format, and ty first",
-            )
+            # 1. Unified Astral toolchain: original order from main preserved
             expected_full_order = [
-                "ruff",
-                "ruff-format",
-                "ty",
-                "bandit",
+                "pylint",
                 "black",
                 "flake8",
                 "isort",
+                "bandit",
                 "mypy",
                 "nbqa",
-                "pylint",
                 "pyright",
+                "ruff",
+                "ruff-format",
+                "ty",
             ]
             self.assertEqual(
                 linter_names,

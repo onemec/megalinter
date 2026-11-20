@@ -9,6 +9,950 @@ file_extensions:
   - ".py"
 processing_order: -9
 linters:
+  # PYLINT
+  - linter_name: pylint
+    file_extensions:
+      - ".py"
+      - ".pyi"
+    linter_text: |
+      **Pylint** is a comprehensive static code analyzer for Python that goes beyond simple syntax checking. It analyzes your code without actually running it, checking for errors, enforcing coding standards, detecting code smells, and suggesting refactoring opportunities.
+
+      **Key features:**
+
+      - **Advanced Code Inference**: Uses internal code representation (astroid) to infer actual values and types, catching more complex issues
+      - **Comprehensive Analysis**: Checks for errors, style violations, code complexity, and potential bugs
+      - **Highly Configurable**: Extensive configuration options to customize rules and integrate with any coding standard
+      - **Plugin Ecosystem**: Rich ecosystem of plugins for popular frameworks (Django, Pydantic, etc.)
+      - **Smart Detection**: Not just trusting type hints - infers actual usage patterns and relationships
+      - **Refactoring Suggestions**: Identifies code smells and suggests improvements for maintainability
+
+      **What makes Pylint unique:**
+
+      - **Deep Inference Engine**: Can detect issues like `import logging as argparse` and catch calls like `argparse.error()` as incorrect
+      - **Thorough Analysis**: More comprehensive than other linters, though slower due to detailed inspection
+      - **Opinionated Checks**: Includes optional checks for code quality beyond basic syntax
+
+      **Common checks include:**
+
+      - **Error Detection**: Syntax errors, undefined variables, import issues
+      - **Code Quality**: Unused variables, too many arguments, complex functions
+      - **Style Enforcement**: PEP 8 compliance, naming conventions, documentation standards
+      - **Design Analysis**: Class design, inheritance issues, interface violations
+      - **Security**: Basic security anti-patterns and vulnerable code constructs
+
+      **Additional tools included:**
+
+      - **Pyreverse**: Generates UML package and class diagrams
+      - **Symilar**: Duplicate code detection integrated into pylint
+
+      For legacy projects, start with `--errors-only` flag and progressively enable more checks. Works best alongside other tools like ruff, mypy, black, and isort for comprehensive Python code quality.
+    name: PYTHON_PYLINT
+    deprecated: true
+    deprecated_description: "PYTHON_PYLINT is deprecated in favor of PYTHON_RUFF (with Pylint rules PLC, PLE, PLR, PLW) and Astral ty (PYTHON_TY). Use PYTHON_RUFF for fast linting with ported Pylint checks and PYTHON_TY for type checking."
+    descriptor_flavors_exclude:
+      - cupcake
+    linter_url: https://pylint.readthedocs.io
+    linter_repo: https://github.com/pylint-dev/pylint
+    linter_megalinter_ref_url: https://github.com/pylint-dev/pylint/pull/11237
+    linter_spdx_license: GPL-2.0
+    linter_speed: 2
+    linter_rules_url: https://pylint.readthedocs.io/en/stable/user_guide/messages/index.html
+    linter_image_url: https://raw.githubusercontent.com/pylint-dev/pylint/main/doc/logo.svg
+    linter_rules_configuration_url: https://pylint.readthedocs.io/en/stable/user_guide/configuration/index.html
+    linter_rules_inline_disable_url: https://pylint.readthedocs.io/en/stable/user_guide/messages/message_control.html
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    cli_lint_mode_project_exclude_arg_name: "--ignore="
+    cli_lint_mode_project_exclude_separator: ","
+    cli_lint_mode_project_exclude_seed_values: ["CVS"]
+    cli_lint_mode_project_exclude_config_key: ["*.ignore", "tool.pylint.*.ignore"]
+    cli_lint_mode_project_extra_args_after:
+      - .
+    cli_lint_mode_project_config_paths_regex: "(?mi)^\\[(?:tool\\.pylint\\.)?(?:main|master)\\][ \\t]*\\n(?:(?!\\[).*\\n)*?[ \\t]*files[ \\t]*="
+    config_file_name: .pylintrc
+    cli_config_arg_name: "--rcfile"
+    cli_lint_errors_count: regex_count
+    cli_lint_errors_regex: ":([0-9]+):([0-9]+):"
+    common_linter_errors:
+      - identifier: PYTHON_PYLINT_ERROR_CONFIG_PARSE
+        regex: "(Error in provided config file|Unable to load configuration|Error while parsing|argument --[A-Za-z-]+: )"
+        message: |-
+          pylint could not parse the configuration file (e.g. `.pylintrc`, `pyproject.toml`).
+          Resolutions:
+            - Validate the TOML/INI syntax of your pylint config.
+            - Make sure option names and section headers (`[MESSAGES CONTROL]`, `[tool.pylint.*]`) are correct for the pinned pylint version.
+            - Run `pylint --generate-rcfile` to compare with a known-good template.
+      - identifier: PYTHON_PYLINT_ERROR_PLUGIN_LOAD
+        regex: "(Unable to load plugin|Problem importing module)"
+        message: |-
+          pylint failed to load a plugin declared in `load-plugins` (e.g. `pylint-django`, `pylint-pydantic`).
+          Resolutions:
+            - Check the plugin name spelling in your pylint config.
+            - Pre-install the missing plugin into pylint's venv via a pre-command in your .mega-linter.yml:
+                PYTHON_PYLINT_PRE_COMMANDS:
+                  - command: "pip install pylint-django"
+                    venv: pylint
+                    continue_if_failed: false
+            - Or remove the plugin from `load-plugins` if it is not needed.
+      - identifier: PYTHON_PYLINT_ERROR_ASTROID_CRASH
+        regex: "(astroid-error|Fatal error while checking |F0002|AstroidError)"
+        message: |-
+          pylint crashed inside its astroid AST parser. This is usually a pylint/astroid bug, not a problem with your code.
+          Resolutions:
+            - Run pylint with `--errors-only` to narrow the offending file.
+            - Disable astroid plugins (`load-plugins`) one by one to find the culprit.
+            - Report the traceback to https://github.com/pylint-dev/pylint/issues.
+    examples:
+      - "pylint myfile.py"
+      - "pylint --rcfile .python-lint myfile.py"
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=pypi depName=pylint
+          ARG PIP_PYLINT_VERSION=4.1.3
+        - |-
+          # renovate: datasource=pypi depName=typing-extensions
+          ARG PIP_TYPING_EXTENSIONS_VERSION=4.16.0
+      pip:
+        - pylint==${PIP_PYLINT_VERSION}
+        - typing-extensions==${PIP_TYPING_EXTENSIONS_VERSION}
+    native_install:
+      method: pip
+      requires:
+        - runtime: python
+          version: ">=3.10"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+    ide:
+      eclipse:
+        - name: PyLint
+          url: https://pydev.org/manual_adv_pylint.html
+      idea:
+        - name: PyCharm (Native Support)
+          url: https://www.jetbrains.com/pycharm/
+      visual_studio:
+        - name: Native Support
+          url: https://learn.microsoft.com/visualstudio/python/linting-python-code
+      vscode:
+        - name: Pylint
+          url: https://marketplace.visualstudio.com/items?itemName=ms-python.pylint
+  # BLACK
+  - linter_name: black
+    class: BlackLinter
+    file_extensions:
+      - ".py"
+      - ".pyi"
+      - ".ipynb"
+    linter_text: |
+      **Black** is "the uncompromising code formatter" for Python that automatically formats your code to be consistent and PEP 8 compliant. By using Black, you agree to cede control over minutiae of hand-formatting in return for speed, determinism, and freedom from formatting debates.
+
+      **Key features:**
+
+      - **Opinionated Formatting**: Minimal configuration with sensible defaults - "Black is opinionated so you don't have to be"
+      - **Deterministic Output**: Same code always produces identical formatting, regardless of environment
+      - **Speed and Efficiency**: Fast formatting with parallel processing capabilities
+      - **Smallest Diffs**: Produces minimal git diffs by being consistent across all projects
+      - **AST Safety**: Verifies that reformatted code produces a valid AST equivalent to the original
+      - **Wide Compatibility**: Supports multiple Python versions and syntax features
+
+      **Formatting principles:**
+
+      - **Consistency Over Preferences**: Uniform style across all Python projects using Black
+      - **Readability First**: Optimizes for code readability and maintainability
+      - **Minimal Configuration**: Works out of the box with virtually no setup required
+
+      **What Black formats:**
+
+      - **Code Structure**: Consistent indentation, line breaks, and whitespace
+      - **String Formatting**: Standardizes quote usage and multi-line strings
+      - **Import Organization**: Works well with isort for import formatting
+      - **Expression Layout**: Optimizes function calls, list comprehensions, and complex expressions
+
+      **Benefits:**
+
+      - **Faster Code Reviews**: Eliminates style discussions and focuses on logic
+      - **Mental Energy Savings**: No time spent on formatting decisions
+      - **Team Consistency**: Entire team uses identical formatting standards
+      - **Reduced Conflicts**: Fewer git merge conflicts due to formatting differences
+
+      Black is successfully used by many projects, small and big, and has become the de facto standard for Python code formatting. It's now stable with comprehensive test coverage and should not expect large formatting changes in the future.
+
+      **Note**: Black formats code according to its opinionated style. If you prefer different formatting options, you might consider other formatters, though Black's consistency is its main strength.
+    name: PYTHON_BLACK
+    deprecated: true
+    deprecated_description: "PYTHON_BLACK is deprecated in favor of PYTHON_RUFF_FORMAT. Configure PYTHON_DEFAULT_STYLE: ruff or use PYTHON_RUFF_FORMAT directly for 10-100x faster formatting with full Black style parity."
+    descriptor_flavors_exclude:
+      - cupcake
+    is_formatter: true
+    activation_rules:
+      - type: variable
+        variable: PYTHON_DEFAULT_STYLE
+        expected_value: black
+        default_value: ruff
+    linter_url: https://black.readthedocs.io/en/stable/
+    linter_repo: https://github.com/psf/black
+    linter_megalinter_ref_url: "no"
+    linter_spdx_license: MIT
+    linter_speed: 3
+    linter_banner_image_url: https://raw.githubusercontent.com/psf/black/master/docs/_static/logo2-readme.png
+    linter_rules_configuration_url: https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-format
+    config_file_name: pyproject.toml
+    cli_config_arg_name: "--config"
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    cli_lint_extra_args:
+      - "--diff"
+      - "--check"
+    cli_lint_mode_project_exclude_arg_name: "--extend-exclude"
+    cli_lint_mode_project_exclude_arg_value: "/{{DIR}}/"
+    cli_lint_mode_project_exclude_separator: "|"
+    cli_lint_mode_project_exclude_config_key: ["tool.black.extend-exclude", "tool.black.extend_exclude"]
+    cli_lint_mode_project_extra_args_after:
+      - .
+    cli_lint_fix_arg_name: "--megalinter-fix-flag" # Workaround for MegaLinter
+    cli_lint_fix_remove_args:
+      - "--diff"
+      - "--check"
+    examples:
+      - "black --diff --check myfile.py"
+      - "black --config pyproject.toml --diff --check myfile.py"
+      - "black --config pyproject.toml myfile.py" # format
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=pypi depName=black
+          ARG PIP_BLACK_VERSION=26.10.1
+      pip:
+        - black[jupyter]==${PIP_BLACK_VERSION}
+    native_install:
+      method: pip
+      requires:
+        - runtime: python
+          version: ">=3.10"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+    ide:
+      emacs:
+        - name: blacken
+          url: https://github.com/pythonic-emacs/blacken
+        - name: reformatter.el
+          url: https://github.com/purcell/reformatter.el
+        - name: elpy
+          url: https://github.com/jorgenschaefer/elpy
+      idea:
+        - name: black
+          url: https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea
+      sublime:
+        - name: sublack
+          url: https://github.com/jgirardet/sublack
+      vscode:
+        - name: VSCode Python Extension
+          url: https://marketplace.visualstudio.com/items?itemName=ms-python.python
+  # FLAKE8
+  - linter_name: flake8
+    linter_text: |
+      **Flake8** is a comprehensive Python code quality checker that combines three powerful tools—pycodestyle, pyflakes, and mccabe—into a unified linting solution. It serves as the go-to tool for enforcing Python coding standards and catching potential issues.
+
+      **Key Features:**
+
+      - **Multi-Tool Integration**: Combines pycodestyle (PEP 8 compliance), pyflakes (logical errors), and mccabe (complexity analysis)
+      - **PEP 8 Enforcement**: Comprehensive style checking against Python's official style guide
+      - **Error Detection**: Identifies undefined names, unused imports, syntax errors, and logical inconsistencies
+      - **Complexity Analysis**: Measures cyclomatic complexity to identify overly complex functions and methods
+      - **Highly Configurable**: Extensive configuration options for customizing rules, ignoring specific errors, and setting complexity thresholds
+      - **Plugin Ecosystem**: Rich ecosystem of plugins for additional checks (security, documentation, imports, etc.)
+      - **Fast Performance**: Efficient scanning with parallel processing capabilities for large codebases
+      - **Inline Suppression**: Granular control with per-line and per-file error suppression options
+    name: PYTHON_FLAKE8
+    deprecated: true
+    deprecated_description: "PYTHON_FLAKE8 is deprecated in favor of PYTHON_RUFF. Use PYTHON_RUFF with 'ruff check --select E,F,W,I,S' for 10-100x faster linting covering Flake8, isort, and Bandit rules."
+    descriptor_flavors_exclude:
+      - cupcake
+    linter_url: https://flake8.pycqa.org
+    linter_repo: https://github.com/PyCQA/flake8
+    linter_spdx_license: MIT
+    linter_speed: 3
+    linter_rules_url: https://flake8.pycqa.org/en/latest/user/error-codes.html
+    linter_rules_configuration_url: https://flake8.pycqa.org/en/latest/user/configuration.html#project-configuration
+    linter_rules_inline_disable_url: https://flake8.pycqa.org/en/3.1.1/user/ignoring-errors.html#in-line-ignoring-errors
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    cli_lint_mode_project_exclude_arg_name: "--extend-exclude="
+    cli_lint_mode_project_exclude_separator: ","
+    cli_lint_mode_project_exclude_config_key: ["flake8.extend-exclude", "flake8.extend_exclude"]
+    config_file_name: .flake8
+    cli_config_arg_name: "--config"
+    cli_lint_errors_count: total_lines
+    common_linter_errors:
+      - identifier: PYTHON_FLAKE8_ERROR_PLUGIN_LOAD
+        regex: '"[A-Za-z0-9_-]+" failed during execution due to'
+        message: |-
+          A flake8 plugin (e.g. flake8-bugbear, flake8-docstrings) crashed while loading or running.
+          This usually means the plugin version is incompatible with the pinned flake8 version, or the plugin is not installed.
+          Resolutions:
+            - Pre-install the missing/compatible plugin into flake8's venv via a pre-command in your .mega-linter.yml:
+                PYTHON_FLAKE8_PRE_COMMANDS:
+                  - command: "pip install flake8-bugbear"
+                    venv: flake8
+                    continue_if_failed: false
+            - Temporarily remove the plugin from your flake8 config to confirm the trigger.
+            - Run with `--verbose` locally to see which plugin emitted the error.
+      - identifier: PYTHON_FLAKE8_ERROR_CONFIG_INVALID
+        regex: "(There was a critical error during execution of Flake8|Error: Invalid value for|tomllib(\\.|: ).+(Invalid|Error)|Error parsing config file)"
+        message: |-
+          flake8 could not parse its configuration file (`.flake8`, `setup.cfg`, or `pyproject.toml`).
+          Resolutions:
+            - Validate the INI/TOML syntax of the config file.
+            - Make sure option keys (e.g. `max-line-length`, `select`, `ignore`) are spelled correctly.
+            - Remove the custom config to confirm the issue is config-related.
+    examples:
+      - "flake8 myfile.py"
+      - "flake8 --config .flake8 myfile.py"
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=pypi depName=flake8
+          ARG PIP_FLAKE8_VERSION=7.5.0
+      pip:
+        - flake8==${PIP_FLAKE8_VERSION}
+    native_install:
+      method: pip
+      requires:
+        - runtime: python
+          version: ">=3.11"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+    ide:
+      vscode:
+        - name: Flake8
+          url: https://marketplace.visualstudio.com/items?itemName=ms-python.flake8
+  # ISORT
+  - linter_name: isort
+    file_extensions:
+      - ".py"
+      - ".pyi"
+      - ".pyx"
+      - ".pxd"
+    linter_text: |
+      **isort** is the definitive Python import sorting tool that automatically organizes and standardizes import statements according to configurable rules. It serves as an essential companion to code formatters for maintaining clean, professional Python codebases.
+
+      **Key Features:**
+
+      - **Intelligent Import Grouping**: Automatically separates standard library, third-party, and local imports into distinct sections
+      - **Alphabetical Sorting**: Sorts imports within each group alphabetically for consistent ordering
+      - **Multiple Profiles**: Built-in profiles for popular formatters (Black, Django, Google, etc.) ensuring seamless integration
+      - **Highly Configurable**: Extensive configuration options for custom sorting rules, line lengths, and import styles
+      - **Multi-line Import Handling**: Smart formatting of long import statements with various wrapping styles
+      - **Namespace Package Support**: Proper handling of namespace packages and relative imports
+      - **Performance Optimized**: Fast processing suitable for large codebases
+      - **Format Compatibility**: Perfect integration with Black, autopep8, and other Python formatting tools
+      - **Diff Mode**: Check-only mode for validation without modification
+    name: PYTHON_ISORT
+    deprecated: true
+    deprecated_description: "PYTHON_ISORT is deprecated in favor of PYTHON_RUFF. Use PYTHON_RUFF with 'ruff check --select E,F,W,I,S' for 10-100x faster import sorting with full isort parity."
+    descriptor_flavors_exclude:
+      - cupcake
+    is_formatter: true
+    linter_url: https://pycqa.github.io/isort/
+    linter_repo: https://github.com/PyCQA/isort
+    linter_megalinter_ref_url: "no"
+    linter_spdx_license: MIT
+    linter_speed: 5
+    linter_banner_image_url: https://raw.githubusercontent.com/pycqa/isort/develop/art/logo_large.png
+    linter_rules_configuration_url: https://pycqa.github.io/isort/docs/configuration/config_files.html
+    linter_rules_inline_disable_url: https://pycqa.github.io/isort/docs/configuration/action_comments.html
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    config_file_name: .isort.cfg
+    cli_config_arg_name: "--settings-file"
+    cli_lint_extra_args:
+      - "--diff"
+      - "--check"
+      - "--profile"
+      - "black"
+    cli_lint_mode_project_exclude_arg_name: "--extend-skip"
+    cli_lint_mode_project_exclude_config_key: ["settings.extend_skip", "isort.extend_skip", "tool.isort.extend_skip"]
+    cli_lint_mode_project_extra_args_after:
+      - .
+    cli_lint_fix_arg_name: "--megalinter-fix-flag" # Workaround for PythonBlackOrIsortLinter class behavior
+    cli_lint_fix_remove_args:
+      - "--diff"
+      - "--check"
+    cli_lint_errors_count: regex_count
+    cli_lint_errors_regex: "\\@\\@ (.*) \\@\\@"
+    examples:
+      - "isort --diff --check --profile black myfile.py"
+      - "isort --diff --check --profile black --settings-file .isort.cfg myfile.py"
+      - "isort --profile black --settings-file .isort.cfg myfile.py"
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=pypi depName=black
+          ARG PIP_BLACK_VERSION=26.10.1
+        - |-
+          # renovate: datasource=pypi depName=isort
+          ARG PIP_ISORT_VERSION=9.0.2
+      pip:
+        - black==${PIP_BLACK_VERSION}
+        - isort==${PIP_ISORT_VERSION}
+    native_install:
+      method: pip
+      requires:
+        - runtime: python
+          version: ">=3.10"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+    ide:
+      emacs:
+        - name: py-isort.el
+          url: https://github.com/paetzke/py-isort.el
+      vim:
+        - name: ale
+          url: https://github.com/w0rp/ale
+        - name: vim-isort
+          url: https://github.com/fisadev/vim-isort#installation
+      vscode:
+        - name: VSCode Python Extension
+          url: https://github.com/Microsoft/vscode-python
+  # BANDIT
+  - linter_name: bandit
+    name: PYTHON_BANDIT
+    deprecated: true
+    deprecated_description: "PYTHON_BANDIT is deprecated in favor of PYTHON_RUFF. Use PYTHON_RUFF with 'ruff check --select E,F,W,I,S' (the S series corresponds to flake8-bandit) for 10-100x faster security checks."
+    can_output_sarif: true
+    file_extensions:
+      - ".py"
+      - ".pyi"
+      - ".ipynb"
+    descriptor_flavors:
+      - python
+      - security
+    linter_text: |
+      **Bandit** is a specialized security-focused tool designed to find common security issues in Python code. It processes each file by building an AST (Abstract Syntax Tree) and runs appropriate security plugins against the AST nodes to identify potential vulnerabilities.
+
+      **Key features:**
+
+      - **Security-Focused Analysis**: Specifically designed to detect security vulnerabilities and weaknesses
+      - **AST-Based Scanning**: Builds abstract syntax trees for thorough code analysis
+      - **Plugin Architecture**: Extensible system with test plugins and blacklist plugins for comprehensive coverage
+      - **Multiple Output Formats**: Supports various report formats including SARIF for security tool integration
+      - **Configurable Severity**: Customizable severity levels and rule configurations
+
+      **Common security issues detected:**
+
+      - **Injection Vulnerabilities**: SQL injection, command injection, code injection patterns
+      - **Cryptographic Issues**: Weak cryptographic algorithms, insecure random number generation
+      - **Authentication Problems**: Hardcoded passwords, weak authentication mechanisms  
+      - **File System Security**: Insecure file permissions, path traversal vulnerabilities
+      - **Network Security**: Insecure SSL/TLS configurations, unverified HTTPS requests
+      - **Code Execution**: Use of dangerous functions like `eval()`, `exec()`, `pickle.loads()`
+      - **Input Validation**: Missing input sanitization and validation
+
+      **Advanced capabilities:**
+
+      - **Blacklist Detection**: Identifies usage of known insecure or deprecated functions
+      - **Context-Aware Analysis**: Understands code context to reduce false positives
+      - **Baseline Support**: Can track security issues over time and focus on new problems
+
+      If you find Bandit too strict for your use case, you can define `PYTHON_BANDIT_DISABLE_ERRORS: true` in your `.mega-linter.yml` config file to treat findings as warnings instead of errors.
+
+      Bandit is essential for maintaining secure Python codebases and is widely used in security-conscious development environments.
+    linter_url: https://bandit.readthedocs.io/en/latest/
+    linter_repo: https://github.com/PyCQA/bandit
+    linter_megalinter_ref_url: "no"
+    linter_spdx_license: Apache-2.0
+    linter_rules_url: https://bandit.readthedocs.io/en/latest/plugins/index.html#complete-test-plugin-listing
+    linter_banner_image_url: https://github.com/PyCQA/bandit/raw/main/logo/logotype-sm.png
+    linter_image_url: https://github.com/PyCQA/bandit/raw/main/logo/logomark.png
+    linter_icon_png_url: https://raw.githubusercontent.com/oxsecurity/megalinter/main/docs/assets/icons/linters/bandit.png
+    linter_rules_configuration_url: https://bandit.readthedocs.io/en/latest/config.html#
+    linter_rules_inline_disable_url: https://bandit.readthedocs.io/en/latest/config.html#suppressing-individual-lines
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    config_file_name: ".bandit.yml"
+    cli_lint_extra_args:
+      - --quiet
+    cli_lint_mode_project_exclude_arg_name: "-x"
+    cli_lint_mode_project_exclude_arg_value: "./{{DIR_PATH}}"
+    cli_lint_mode_project_exclude_separator: ","
+    cli_lint_mode_project_exclude_config_key: "bandit.exclude"
+    cli_lint_mode_project_exclude_config_files: [".bandit"]
+    cli_lint_mode_project_exclude_seed_values:
+      ["./.svn", "./CVS", "./.bzr", "./.hg", "./.git", "./__pycache__", "./.tox", "./.eggs", "*.egg"]
+    cli_lint_mode_project_extra_args_after:
+      - --recursive
+      - .
+    cli_sarif_args:
+      - --format
+      - sarif
+      - --output
+      - "{{SARIF_OUTPUT_FILE}}"
+    cli_lint_errors_count: regex_count
+    cli_lint_errors_regex: ">> Issue: \\["
+    common_linter_errors:
+      - identifier: PYTHON_BANDIT_ERROR_CONFIG_NOT_FOUND
+        regex: "(Could not read config file|Unable to read config file|could not find config file)"
+        message: |-
+          bandit could not read the configuration file referenced via `--configfile` (or `.bandit.yml` / `pyproject.toml`).
+          Resolutions:
+            - Confirm the config file is committed to the repository and visible at the expected path.
+            - If you customised `PYTHON_BANDIT_CONFIG_FILE`, double-check the value points to a valid file in the workspace.
+      - identifier: PYTHON_BANDIT_ERROR_CONFIG_INVALID
+        regex: "(Error parsing file:|yaml\\.scanner\\.ScannerError|yaml\\.parser\\.ParserError|tomllib\\.TOMLDecodeError|Invalid YAML)"
+        message: |-
+          bandit found the config file but failed to parse it (invalid YAML or TOML).
+          Resolutions:
+            - Run a YAML/TOML linter against `.bandit.yml` or the `[tool.bandit]` section of `pyproject.toml`.
+            - Make sure indentation and option keys (`tests`, `skips`, `exclude_dirs`) follow the bandit schema.
+      - identifier: PYTHON_BANDIT_ERROR_PROFILE_NOT_FOUND
+        regex: "(Unable to find profile|No tests would be run)"
+        message: |-
+          bandit could not load the requested test profile or every test was excluded.
+          Resolutions:
+            - Check the profile name in your config.
+            - Make sure `tests` / `skips` lists reference valid plugin IDs (B101, B602, ...).
+    # On Windows, bandit prints the path of its bandit.EXE launcher
+    version_extract_regex: "(?i)(?<=bandit )\\d+(\\.\\d+)+|(?<=bandit\\.exe )\\d+(\\.\\d+)+"
+    test_folder: python_bandit
+    examples:
+      - "bandit myfile.py"
+      - "bandit --configfile .bandit.yml myfile.py"
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=pypi depName=bandit
+          ARG PIP_BANDIT_VERSION=1.9.4
+        - |-
+          # renovate: datasource=pypi depName=bandit_sarif_formatter
+          ARG PIP_BANDIT_SARIF_FORMATTER_VERSION=1.1.1
+      pip:
+        - bandit==${PIP_BANDIT_VERSION}
+        - bandit_sarif_formatter==${PIP_BANDIT_SARIF_FORMATTER_VERSION}
+        - bandit[toml]==${PIP_BANDIT_VERSION}
+    native_install:
+      method: pip
+      requires:
+        - runtime: python
+          version: ">=3.10"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+    ide:
+      sublime:
+        - name: SublimeLinter-bandit
+          url: https://github.com/SublimeLinter/SublimeLinter-bandit
+      vscode:
+        - name: Bandit by PyCQA
+          url: https://marketplace.visualstudio.com/items?itemName=pycqa.bandit-pycqa
+  # MYPY
+  - linter_name: mypy
+    name: PYTHON_MYPY
+    deprecated: true
+    deprecated_description: "PYTHON_MYPY is deprecated in favor of PYTHON_TY. Astral ty provides unified, high-speed type checking for Python without the startup overhead of Mypy."
+    descriptor_flavors_exclude:
+      - cupcake
+    file_extensions:
+      - ".py"
+      - ".pyi"
+    linter_text: |
+      **MyPy** is Python's premier static type checker that brings optional static typing to Python through gradual typing. It analyzes type annotations and infers types to catch bugs before runtime, bridging the gap between Python's dynamic nature and static analysis benefits.
+
+      **Key Features:**
+
+      - **Gradual Typing Support**: Add type checking incrementally to existing codebases without requiring full annotation coverage
+      - **Type Inference**: Advanced type inference engine that understands Python idioms and can deduce types even without explicit annotations
+      - **Protocol Support**: Duck typing through protocols, enabling structural subtyping for flexible type checking
+      - **Generic Types**: Full support for generic types, type variables, and complex type relationships
+      - **Plugin Architecture**: Extensible with plugins for popular frameworks like Django, SQLAlchemy, and dataclasses
+      - **Incremental Checking**: Fast incremental analysis that only re-checks modified files and their dependencies
+      - **Strict Mode Options**: Configurable strictness levels from permissive to extremely strict type checking
+      - **Python Version Compatibility**: Supports multiple Python versions and can check compatibility across versions
+
+      **Note**: If you don't use Python static typing, disable this linter by adding `PYTHON_MYPY` to `DISABLE_LINTERS` in your `.mega-linter.yml` config file.
+    linter_url: https://mypy.readthedocs.io/en/stable/
+    linter_repo: https://github.com/python/mypy
+    linter_spdx_license: MIT
+    linter_speed: 1
+    linter_banner_image_url: http://mypy-lang.org/static/mypy_light.svg
+    linter_rules_configuration_url: https://mypy.readthedocs.io/en/stable/config_file.html
+    linter_rules_inline_disable_url: https://mypy.readthedocs.io/en/stable/inline_config.html#inline-config
+    linter_megalinter_ref_url: never
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    cli_lint_extra_args:
+      - "--install-types"
+      - "--non-interactive"
+    cli_lint_mode_project_exclude_arg_name: "--exclude"
+    cli_lint_mode_project_exclude_arg_value: "/{{DIR}}/"
+    cli_lint_mode_project_extra_args_after:
+      - .
+    cli_lint_mode_project_config_paths_regex: "(?m)^\\[(?:tool\\.)?mypy\\][ \\t]*\\n(?:(?!\\[).*\\n)*?[ \\t]*(?:files|packages|modules)[ \\t]*="
+    cli_lint_errors_count: regex_sum
+    cli_lint_errors_regex: "Found ([0-9]+) error"
+    cli_config_arg_name: "--config-file"
+    cli_version_arg_name: "--version"
+    config_file_name: ".mypy.ini"
+    common_linter_errors:
+      - identifier: PYTHON_MYPY_ERROR_STUBS_INSTALL_FAILED
+        regex: "(error installing types|installation of type stubs (failed|did not succeed)|mypy: error: --install-types)"
+        message: |-
+          mypy attempted to auto-install missing type stubs (`--install-types`) but the pip step failed.
+          This is usually a network issue or a missing stub package on PyPI.
+          Resolutions:
+            - Pre-install the required `types-*` stub packages into mypy's venv via a pre-command in your .mega-linter.yml:
+                PYTHON_MYPY_PRE_COMMANDS:
+                  - command: "pip install types-requests types-PyYAML"
+                    venv: mypy
+                    continue_if_failed: false
+            - For libraries with no published stubs, silence the import with `# type: ignore[import]` or add them to `ignore_missing_imports` in your mypy config.
+      - identifier: PYTHON_MYPY_ERROR_CONFIG_INVALID
+        regex: "(mypy: error: Invalid (config|option)|mypy: error: Configuration file|configparser\\.(Error|ParsingError)|tomllib\\.TOMLDecodeError.+mypy)"
+        message: |-
+          mypy could not parse its configuration file (`.mypy.ini`, `mypy.ini`, `pyproject.toml [tool.mypy]`, or `setup.cfg`).
+          Resolutions:
+            - Validate INI/TOML syntax of the mypy config.
+            - Check option names match the pinned mypy version's documentation.
+            - Remove the custom config to confirm the issue is config-related.
+      - identifier: PYTHON_MYPY_ERROR_DAEMON_CRASH
+        regex: "(INTERNAL ERROR|Traceback \\(most recent call last\\)|mypy crashed)"
+        message: |-
+          mypy crashed with an internal error. This usually indicates a bug in mypy or an interaction with a plugin.
+          Resolutions:
+            - Clear the mypy cache (MegaLinter sets `MYPY_CACHE_DIR=/tmp/.mypy_cache`, but stale data can persist between runs in long-lived environments).
+            - Disable mypy plugins (`plugins = ...` in your config) one by one to narrow the cause.
+            - Report the traceback to https://github.com/python/mypy/issues.
+    version_extract_regex: "(?<=mypy )\\d+(\\.\\d+)+"
+    test_folder: python_mypy
+    examples:
+      - "mypy myfile.py"
+      - "mypy --config-file .mypy.yml myfile.py"
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=pypi depName=mypy
+          ARG PIP_MYPY_VERSION=2.4.1
+        - ENV MYPY_CACHE_DIR=/tmp/.mypy_cache # Avoid mypy cache to mess with other linters
+      pip:
+        - mypy==${PIP_MYPY_VERSION}
+    native_install:
+      method: pip
+      requires:
+        - runtime: python
+          version: ">=3.10"
+      env:
+        MYPY_CACHE_DIR: "{{NATIVE_INSTALL_DIR}}/mypy-cache"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+    ide:
+      emacs:
+        - name: Flycheck mypy
+          url: https://github.com/lbolla/emacs-flycheck-mypy
+      idea:
+        - name: mypy-official
+          url: https://plugins.jetbrains.com/plugin/13348-mypy-official-/
+      sublime:
+        - name: SublimeLinter-contrib-mypy
+          url: https://github.com/fredcallaway/SublimeLinter-contrib-mypy
+      vim:
+        - name: Ale
+          url: https://github.com/dense-analysis/ale
+        - name: Syntastic
+          url: https://github.com/vim-syntastic/syntastic
+      vscode:
+        - name: Mypy
+          url: https://marketplace.visualstudio.com/items?itemName=matangover.mypy
+  # NBQA-MYPY
+  - linter_name: nbqa
+    name: PYTHON_NBQA_MYPY
+    deprecated: true
+    deprecated_description: "PYTHON_NBQA is deprecated in favor of PYTHON_TY and PYTHON_RUFF. Ruff natively checks Jupyter notebooks (.ipynb) and ty provides fast type checking."
+    descriptor_flavors_exclude:
+      - cupcake
+    file_extensions:
+      - ".ipynb"
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    cli_lint_extra_args:
+      - "mypy"
+      - "--install-types"
+      - "--non-interactive"
+    cli_lint_mode_project_exclude_arg_name: "--nbqa-exclude"
+    cli_lint_mode_project_exclude_arg_value: "(^|/){{DIR}}/"
+    cli_lint_mode_project_exclude_separator: "|"
+    cli_lint_mode_project_exclude_config_key: "tool.nbqa.exclude.mypy"
+    cli_lint_mode_project_exclude_config_files: ["pyproject.toml"]
+    cli_lint_mode_project_extra_args_after:
+      - .
+    cli_lint_errors_count: regex_sum
+    cli_lint_errors_regex: "Found ([0-9]+) error"
+    cli_version_arg_name: "--version"
+    version_extract_regex: "(?<=nbqa )\\d+(\\.\\d+)+"
+    # Note: nbqa passes args to the underlying tool (mypy), so we don't use cli_config_arg_name
+    # MyPy will auto-detect config files (pyproject.toml, .mypy.ini, setup.cfg, etc.)
+    common_linter_errors:
+      - identifier: PYTHON_NBQA_MYPY_ERROR_NOTEBOOK_INVALID
+        regex: "(NotJSONError|nbformat\\.reader\\.NotJSONError|Notebook does not appear to be JSON|Failed to read notebook|nbformat\\.validator\\.ValidationError)"
+        message: |-
+          nbqa could not read a Jupyter notebook because the `.ipynb` file is not valid JSON or violates the nbformat schema.
+          Resolutions:
+            - Open the notebook in JupyterLab/VS Code and re-save it to fix the JSON structure.
+            - Check for merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`) committed inside the notebook.
+            - Validate the notebook with `jupyter nbformat --validate path/to/notebook.ipynb`.
+      - identifier: PYTHON_NBQA_MYPY_ERROR_TOOL_CRASH
+        regex: "(An error occurred while running nbQA|nbqa\\.cmdline\\.|UnsupportedPackageVersionError)"
+        message: |-
+          nbqa crashed while invoking mypy on a notebook. This typically means the bundled nbqa and mypy versions disagree on calling conventions or an unsupported notebook feature was hit.
+          Resolutions:
+            - Confirm the notebook does not contain Jupyter magic commands (`%%bash`, `!pip ...`) at module scope; nbqa skips them but malformed cells can still trip it up.
+            - Report the traceback to https://github.com/nbQA-dev/nbQA/issues including the failing cell.
+    test_folder: python_nbqa_mypy
+    linter_text: |
+      **nbqa + mypy** provides static type checking for Jupyter notebooks.
+
+      **nbqa** (NoteBook QA) runs standard Python linters on Jupyter notebooks by extracting code cells and running the linter on them. Combined with **mypy**, it brings static type checking to notebook development.
+
+      **Key features:**
+
+      - **Type Checking in Notebooks**: Catch type errors in notebook cells before execution
+      - **Cell-Aware Errors**: Error messages reference correct cell and line numbers
+      - **Mypy Integration**: Uses your existing mypy configuration
+      - **Supports Complex Types**: Handles generics, protocols, type inference, etc.
+      - **Gradual Typing**: Add type hints incrementally to notebooks
+      - **IDE Integration**: Works with Jupyter Lab, VS Code, and other notebook editors
+
+      **Common use cases:**
+      - Type-check data science notebooks before production deployment
+      - Catch type errors in ML model training code
+      - Ensure type consistency across notebook projects
+      - Validate notebook code in CI/CD pipelines
+
+      **Note**: This linter only checks `.ipynb` files. Use PYTHON_MYPY for `.py` and `.pyi` files.
+    linter_url: https://github.com/nbQA-dev/nbQA
+    linter_repo: https://github.com/nbQA-dev/nbQA
+    linter_megalinter_ref_url: https://github.com/nbQA-dev/nbQA#-used-by
+    linter_rules_url: https://github.com/nbQA-dev/nbQA
+    linter_spdx_license: MIT
+    linter_speed: 2
+    examples:
+      - "nbqa mypy myfile.ipynb"
+      - "nbqa mypy --config-file .mypy.ini myfile.ipynb"
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=pypi depName=nbqa
+          ARG PIP_NBQA_VERSION=1.9.1
+        - |-
+          # renovate: datasource=pypi depName=mypy
+          ARG PIP_MYPY_VERSION=2.4.1
+        - ENV MYPY_CACHE_DIR=/tmp/.mypy_cache # Avoid mypy cache to mess with other linters
+      pip:
+        - nbqa==${PIP_NBQA_VERSION}
+        - mypy==${PIP_MYPY_VERSION}
+    native_install:
+      method: pip
+      requires:
+        - runtime: python
+          version: ">=3.10"
+      env:
+        MYPY_CACHE_DIR: "{{NATIVE_INSTALL_DIR}}/mypy-cache"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+  # PyType # NV Not working yet, if anyone wants to complete it, please be my guest :)
+  # - linter_name: pytype
+  #   name: PYTHON_PYTYPE
+  #   linter_text: |
+  #     Optional static typing checks for python, by Google
+
+  #     If you don't use python static typing, you should disable this linter by adding `PYTHON_PYTYPE` in `DISABLE_LINTERS` variable in your `.mega-linter.yml` config file
+  #   linter_url: https://google.github.io/pytype/
+  #   linter_repo: https://github.com/google/pytype
+  #   linter_speed: 1
+  #   linter_rules_inline_disable_url: https://google.github.io/pytype/user_guide.html#silencing-errors
+  #   cli_lint_mode: list_of_files
+  #   supported_cli_lint_modes:
+  #     - file
+  #     - list_of_files
+  #     - project
+  #   cli_lint_mode_project_extra_args_after:
+  #     - .
+  #   config_file_name: pytype.cfg
+  #   cli_lint_errors_count: regex_sum
+  #   cli_lint_errors_regex: "Found ([0-9]+) error"
+  #   test_folder: python_mypy
+  #   examples:
+  #     - "pytype myfile.py myfile2.py"
+  #     - "pytype myfile.py"
+  #   install:
+  #     dockerfile:
+  #       - |-
+  #         # renovate: datasource=pypi depName=pytype
+  #         ARG PIP_PYTYPE_VERSION=2024.10.11
+  #     pip:
+  #       - pytype==${PIP_PYTYPE_VERSION}
+  # PyRight
+  - class: PyrightLinter
+    linter_name: pyright
+    name: PYTHON_PYRIGHT
+    deprecated: true
+    deprecated_description: "PYTHON_PYRIGHT is deprecated in favor of PYTHON_TY. Astral ty provides unified, high-speed type checking for Python without requiring a separate Node.js runtime environment."
+    descriptor_flavors_exclude:
+      - cupcake
+    file_extensions:
+      - ".py"
+      - ".pyi"
+    linter_text: |
+      **Pyright** is Microsoft's high-performance static type checker for Python that provides fast, accurate type analysis. It serves as a powerful alternative to MyPy with focus on speed and developer experience.
+
+      **Key Features:**
+
+      - **High Performance**: Lightning-fast type checking with incremental analysis and efficient caching
+      - **Advanced Type Features**: Full support for generics, protocols, type unions, literal types, and advanced Python typing features
+      - **Configuration Flexibility**: Comprehensive configuration options through pyrightconfig.json for fine-tuned type checking
+      - **Multi-Python Support**: Can analyze code for different Python versions and check version compatibility
+      - **Import Resolution**: Sophisticated import resolution handling complex package structures and namespace packages
+      - **Type Inference**: Advanced type inference engine that minimizes the need for explicit type annotations
+      - **Strict Mode Support**: Configurable strictness levels from basic checking to comprehensive type safety enforcement
+      - **Cross-Platform**: Consistent behavior across Windows, macOS, and Linux development environments
+
+      **Note**: If you don't use Python static typing, disable this linter by adding `PYTHON_PYRIGHT` to `DISABLE_LINTERS` in your `.mega-linter.yml` config file.
+    linter_url: https://github.com/Microsoft/pyright
+    linter_rules_url: https://github.com/microsoft/pyright#type-checking-features
+    linter_repo: https://github.com/microsoft/pyright
+    linter_megalinter_ref_url: https://microsoft.github.io/pyright/#/ci-integration
+    linter_spdx_license: MIT
+    linter_banner_image_url: https://github.com/microsoft/pyright/raw/main/docs/img/PyrightLarge.png
+    linter_speed: 1
+    linter_rules_configuration_url: https://github.com/microsoft/pyright/blob/main/docs/configuration.md
+    linter_rules_inline_disable_url: https://github.com/microsoft/pyright/blob/main/docs/comments.md#file-level-type-controls
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    cli_lint_mode_project_extra_args_after:
+      - .
+    cli_lint_mode_project_config_paths_regex: "\"include\"\\s*:"
+    config_file_name: pyrightconfig.json
+    cli_config_arg_name: -p
+    cli_lint_errors_count: regex_sum
+    cli_lint_errors_regex: "([0-9]+) errors,"
+    test_folder: python_mypy
+    examples:
+      - "pyright myfile.py myfile2.py"
+      - "pyright myfile.py"
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=npm depName=pyright
+          ARG NPM_PYRIGHT_VERSION=1.1.414
+      npm:
+        - pyright@${NPM_PYRIGHT_VERSION}
+    native_install:
+      method: npm
+      requires:
+        - runtime: node
+          version: ">=14"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+    ide:
+      emacs:
+        - name: LSP-pyright
+          url: https://github.com/emacs-lsp/lsp-pyright
+      sublime:
+        - name: LSP-pyright
+          url: https://packagecontrol.io/packages/LSP-pyright
+      vim:
+        - name: Ale
+          url: https://github.com/dense-analysis/ale
+        - name: coc-pyright
+          url: https://github.com/fannheyward/coc-pyright
+      vscode:
+        - name: PyRight
+          url: https://marketplace.visualstudio.com/items?itemName=ms-pyright.pyright
   # ruff
   - linter_name: ruff
     name: PYTHON_RUFF
@@ -28,39 +972,6 @@ linters:
       - **Auto-fixing**: Automatic error correction for many violations (unused imports, formatting issues, etc.)
       - **Modern Python Support**: Full Python 3.13 compatibility with pyproject.toml configuration support
       - **Monorepo-Friendly**: Hierarchical and cascading configuration for complex project structures
-
-      ### Migrating from Legacy Python Linters (Flake8, Black, isort, Bandit, Pylint)
-
-      To replace Flake8, Black, isort, Bandit, and Pylint with Ruff and `ty`, configure your `pyproject.toml` (or `.ruff.toml`):
-
-      ```toml
-      [tool.ruff.lint]
-      # Tier 1: Direct parity replacements for Flake8, isort, Bandit, and core Pylint
-      select = [
-          "E", "F", "W", # Flake8 / pycodestyle / pyflakes
-          "I",           # isort
-          "S",           # Bandit
-          "PLE", "PLW", "PLC", # Pylint (Errors, Warnings, Conventions)
-      ]
-
-      # Tier 2 (Optional): Recommended modernizations & refactoring
-      # Uncomment to adopt additional deep inspection:
-      # extend-select = [
-      #     "B",   # flake8-bugbear
-      #     "C4",  # flake8-comprehensions
-      #     "UP",  # pyupgrade (syntax modernization)
-      #     "PLR", # Pylint refactoring
-      # ]
-      # ignore = [
-      #     "PLR0913", # Too many arguments (> 5)
-      #     "PLR2004", # Magic value in comparison
-      # ]
-
-      [tool.ruff]
-      # target-version is inferred automatically from pyproject.toml requires-python
-      # or .python-version; only specify if you need a hard override
-      line-length = 88 # Matches Black's default
-      ```
     linter_url: https://github.com/astral-sh/ruff
     linter_repo: https://github.com/astral-sh/ruff
     linter_megalinter_ref_url: https://github.com/astral-sh/ruff#whos-using-ruff
@@ -330,951 +1241,3 @@ linters:
       vscode:
         - name: ty
           url: https://marketplace.visualstudio.com/items?itemName=astral-sh.ty
-
-  # BANDIT
-  - linter_name: bandit
-    deprecated: true
-    deprecated_description: "Deprecated in favor of Ruff (ruff check --select E,F,W,I,S). Ruff natively implements Black formatting, isort import sorting, Flake8 style rules, and Bandit security checks (S series) running 30–100× faster."
-    name: PYTHON_BANDIT
-    can_output_sarif: true
-    file_extensions:
-      - ".py"
-      - ".pyi"
-      - ".ipynb"
-    descriptor_flavors:
-      - python
-      - security
-    linter_text: |
-      **Bandit** is a specialized security-focused tool designed to find common security issues in Python code. It processes each file by building an AST (Abstract Syntax Tree) and runs appropriate security plugins against the AST nodes to identify potential vulnerabilities.
-
-      **Key features:**
-
-      - **Security-Focused Analysis**: Specifically designed to detect security vulnerabilities and weaknesses
-      - **AST-Based Scanning**: Builds abstract syntax trees for thorough code analysis
-      - **Plugin Architecture**: Extensible system with test plugins and blacklist plugins for comprehensive coverage
-      - **Multiple Output Formats**: Supports various report formats including SARIF for security tool integration
-      - **Configurable Severity**: Customizable severity levels and rule configurations
-
-      **Common security issues detected:**
-
-      - **Injection Vulnerabilities**: SQL injection, command injection, code injection patterns
-      - **Cryptographic Issues**: Weak cryptographic algorithms, insecure random number generation
-      - **Authentication Problems**: Hardcoded passwords, weak authentication mechanisms  
-      - **File System Security**: Insecure file permissions, path traversal vulnerabilities
-      - **Network Security**: Insecure SSL/TLS configurations, unverified HTTPS requests
-      - **Code Execution**: Use of dangerous functions like `eval()`, `exec()`, `pickle.loads()`
-      - **Input Validation**: Missing input sanitization and validation
-
-      **Advanced capabilities:**
-
-      - **Blacklist Detection**: Identifies usage of known insecure or deprecated functions
-      - **Context-Aware Analysis**: Understands code context to reduce false positives
-      - **Baseline Support**: Can track security issues over time and focus on new problems
-
-      If you find Bandit too strict for your use case, you can define `PYTHON_BANDIT_DISABLE_ERRORS: true` in your `.mega-linter.yml` config file to treat findings as warnings instead of errors.
-
-      Bandit is essential for maintaining secure Python codebases and is widely used in security-conscious development environments.
-    linter_url: https://bandit.readthedocs.io/en/latest/
-    linter_repo: https://github.com/PyCQA/bandit
-    linter_megalinter_ref_url: "no"
-    linter_spdx_license: Apache-2.0
-    linter_rules_url: https://bandit.readthedocs.io/en/latest/plugins/index.html#complete-test-plugin-listing
-    linter_banner_image_url: https://github.com/PyCQA/bandit/raw/main/logo/logotype-sm.png
-    linter_image_url: https://github.com/PyCQA/bandit/raw/main/logo/logomark.png
-    linter_icon_png_url: https://raw.githubusercontent.com/oxsecurity/megalinter/main/docs/assets/icons/linters/bandit.png
-    linter_rules_configuration_url: https://bandit.readthedocs.io/en/latest/config.html#
-    linter_rules_inline_disable_url: https://bandit.readthedocs.io/en/latest/config.html#suppressing-individual-lines
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    config_file_name: ".bandit.yml"
-    cli_lint_extra_args:
-      - --quiet
-    cli_lint_mode_project_exclude_arg_name: "-x"
-    cli_lint_mode_project_exclude_arg_value: "./{{DIR_PATH}}"
-    cli_lint_mode_project_exclude_separator: ","
-    cli_lint_mode_project_exclude_config_key: "bandit.exclude"
-    cli_lint_mode_project_exclude_config_files: [".bandit"]
-    cli_lint_mode_project_exclude_seed_values:
-      ["./.svn", "./CVS", "./.bzr", "./.hg", "./.git", "./__pycache__", "./.tox", "./.eggs", "*.egg"]
-    cli_lint_mode_project_extra_args_after:
-      - --recursive
-      - .
-    cli_sarif_args:
-      - --format
-      - sarif
-      - --output
-      - "{{SARIF_OUTPUT_FILE}}"
-    cli_lint_errors_count: regex_count
-    cli_lint_errors_regex: ">> Issue: \\["
-    common_linter_errors:
-      - identifier: PYTHON_BANDIT_ERROR_CONFIG_NOT_FOUND
-        regex: "(Could not read config file|Unable to read config file|could not find config file)"
-        message: |-
-          bandit could not read the configuration file referenced via `--configfile` (or `.bandit.yml` / `pyproject.toml`).
-          Resolutions:
-            - Confirm the config file is committed to the repository and visible at the expected path.
-            - If you customised `PYTHON_BANDIT_CONFIG_FILE`, double-check the value points to a valid file in the workspace.
-      - identifier: PYTHON_BANDIT_ERROR_CONFIG_INVALID
-        regex: "(Error parsing file:|yaml\\.scanner\\.ScannerError|yaml\\.parser\\.ParserError|tomllib\\.TOMLDecodeError|Invalid YAML)"
-        message: |-
-          bandit found the config file but failed to parse it (invalid YAML or TOML).
-          Resolutions:
-            - Run a YAML/TOML linter against `.bandit.yml` or the `[tool.bandit]` section of `pyproject.toml`.
-            - Make sure indentation and option keys (`tests`, `skips`, `exclude_dirs`) follow the bandit schema.
-      - identifier: PYTHON_BANDIT_ERROR_PROFILE_NOT_FOUND
-        regex: "(Unable to find profile|No tests would be run)"
-        message: |-
-          bandit could not load the requested test profile or every test was excluded.
-          Resolutions:
-            - Check the profile name in your config.
-            - Make sure `tests` / `skips` lists reference valid plugin IDs (B101, B602, ...).
-    # On Windows, bandit prints the path of its bandit.EXE launcher
-    version_extract_regex: "(?i)(?<=bandit )\\d+(\\.\\d+)+|(?<=bandit\\.exe )\\d+(\\.\\d+)+"
-    test_folder: python_bandit
-    examples:
-      - "bandit myfile.py"
-      - "bandit --configfile .bandit.yml myfile.py"
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=pypi depName=bandit
-          ARG PIP_BANDIT_VERSION=1.9.4
-        - |-
-          # renovate: datasource=pypi depName=bandit_sarif_formatter
-          ARG PIP_BANDIT_SARIF_FORMATTER_VERSION=1.1.1
-      pip:
-        - bandit==${PIP_BANDIT_VERSION}
-        - bandit_sarif_formatter==${PIP_BANDIT_SARIF_FORMATTER_VERSION}
-        - bandit[toml]==${PIP_BANDIT_VERSION}
-    native_install:
-      method: pip
-      requires:
-        - runtime: python
-          version: ">=3.10"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-    ide:
-      sublime:
-        - name: SublimeLinter-bandit
-          url: https://github.com/SublimeLinter/SublimeLinter-bandit
-      vscode:
-        - name: Bandit by PyCQA
-          url: https://marketplace.visualstudio.com/items?itemName=pycqa.bandit-pycqa
-  # BLACK
-  - linter_name: black
-    deprecated: true
-    deprecated_description: "Deprecated in favor of Ruff format (PYTHON_RUFF_FORMAT / ruff format). Ruff natively implements all Black formatting rules (>99.9% compatibility) while running 30–100× faster."
-    descriptor_flavors_exclude:
-      - cupcake
-    class: BlackLinter
-    file_extensions:
-      - ".py"
-      - ".pyi"
-      - ".ipynb"
-    linter_text: |
-      **Black** is "the uncompromising code formatter" for Python that automatically formats your code to be consistent and PEP 8 compliant. By using Black, you agree to cede control over minutiae of hand-formatting in return for speed, determinism, and freedom from formatting debates.
-
-      **Key features:**
-
-      - **Opinionated Formatting**: Minimal configuration with sensible defaults - "Black is opinionated so you don't have to be"
-      - **Deterministic Output**: Same code always produces identical formatting, regardless of environment
-      - **Speed and Efficiency**: Fast formatting with parallel processing capabilities
-      - **Smallest Diffs**: Produces minimal git diffs by being consistent across all projects
-      - **AST Safety**: Verifies that reformatted code produces a valid AST equivalent to the original
-      - **Wide Compatibility**: Supports multiple Python versions and syntax features
-
-      **Formatting principles:**
-
-      - **Consistency Over Preferences**: Uniform style across all Python projects using Black
-      - **Readability First**: Optimizes for code readability and maintainability
-      - **Minimal Configuration**: Works out of the box with virtually no setup required
-
-      **What Black formats:**
-
-      - **Code Structure**: Consistent indentation, line breaks, and whitespace
-      - **String Formatting**: Standardizes quote usage and multi-line strings
-      - **Import Organization**: Works well with isort for import formatting
-      - **Expression Layout**: Optimizes function calls, list comprehensions, and complex expressions
-
-      **Benefits:**
-
-      - **Faster Code Reviews**: Eliminates style discussions and focuses on logic
-      - **Mental Energy Savings**: No time spent on formatting decisions
-      - **Team Consistency**: Entire team uses identical formatting standards
-      - **Reduced Conflicts**: Fewer git merge conflicts due to formatting differences
-
-      Black is successfully used by many projects, small and big, and has become the de facto standard for Python code formatting. It's now stable with comprehensive test coverage and should not expect large formatting changes in the future.
-
-      **Note**: Black formats code according to its opinionated style. If you prefer different formatting options, you might consider other formatters, though Black's consistency is its main strength.
-    name: PYTHON_BLACK
-    is_formatter: true
-    activation_rules:
-      - type: variable
-        variable: PYTHON_DEFAULT_STYLE
-        expected_value: black
-        default_value: ruff
-    linter_url: https://black.readthedocs.io/en/stable/
-    linter_repo: https://github.com/psf/black
-    linter_megalinter_ref_url: "no"
-    linter_spdx_license: MIT
-    linter_speed: 3
-    linter_banner_image_url: https://raw.githubusercontent.com/psf/black/master/docs/_static/logo2-readme.png
-    linter_rules_configuration_url: https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-format
-    config_file_name: pyproject.toml
-    cli_config_arg_name: "--config"
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    cli_lint_extra_args:
-      - "--diff"
-      - "--check"
-    cli_lint_mode_project_exclude_arg_name: "--extend-exclude"
-    cli_lint_mode_project_exclude_arg_value: "/{{DIR}}/"
-    cli_lint_mode_project_exclude_separator: "|"
-    cli_lint_mode_project_exclude_config_key: ["tool.black.extend-exclude", "tool.black.extend_exclude"]
-    cli_lint_mode_project_extra_args_after:
-      - .
-    cli_lint_fix_arg_name: "--megalinter-fix-flag" # Workaround for MegaLinter
-    cli_lint_fix_remove_args:
-      - "--diff"
-      - "--check"
-    examples:
-      - "black --diff --check myfile.py"
-      - "black --config pyproject.toml --diff --check myfile.py"
-      - "black --config pyproject.toml myfile.py" # format
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=pypi depName=black
-          ARG PIP_BLACK_VERSION=26.10.1
-      pip:
-        - black[jupyter]==${PIP_BLACK_VERSION}
-    native_install:
-      method: pip
-      requires:
-        - runtime: python
-          version: ">=3.10"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-    ide:
-      emacs:
-        - name: blacken
-          url: https://github.com/pythonic-emacs/blacken
-        - name: reformatter.el
-          url: https://github.com/purcell/reformatter.el
-        - name: elpy
-          url: https://github.com/jorgenschaefer/elpy
-      idea:
-        - name: black
-          url: https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea
-      sublime:
-        - name: sublack
-          url: https://github.com/jgirardet/sublack
-      vscode:
-        - name: VSCode Python Extension
-          url: https://marketplace.visualstudio.com/items?itemName=ms-python.python
-  # FLAKE8
-  - linter_name: flake8
-    deprecated: true
-    deprecated_description: "Deprecated in favor of Ruff (ruff check --select E,F,W,I,S). Ruff natively implements Black formatting, isort import sorting, Flake8 style rules, and Bandit security checks (S series) running 30–100× faster."
-    descriptor_flavors_exclude:
-      - cupcake
-    linter_text: |
-      **Flake8** is a comprehensive Python code quality checker that combines three powerful tools—pycodestyle, pyflakes, and mccabe—into a unified linting solution. It serves as the go-to tool for enforcing Python coding standards and catching potential issues.
-
-      **Key Features:**
-
-      - **Multi-Tool Integration**: Combines pycodestyle (PEP 8 compliance), pyflakes (logical errors), and mccabe (complexity analysis)
-      - **PEP 8 Enforcement**: Comprehensive style checking against Python's official style guide
-      - **Error Detection**: Identifies undefined names, unused imports, syntax errors, and logical inconsistencies
-      - **Complexity Analysis**: Measures cyclomatic complexity to identify overly complex functions and methods
-      - **Highly Configurable**: Extensive configuration options for customizing rules, ignoring specific errors, and setting complexity thresholds
-      - **Plugin Ecosystem**: Rich ecosystem of plugins for additional checks (security, documentation, imports, etc.)
-      - **Fast Performance**: Efficient scanning with parallel processing capabilities for large codebases
-      - **Inline Suppression**: Granular control with per-line and per-file error suppression options
-    name: PYTHON_FLAKE8
-    linter_url: https://flake8.pycqa.org
-    linter_repo: https://github.com/PyCQA/flake8
-    linter_spdx_license: MIT
-    linter_speed: 3
-    linter_rules_url: https://flake8.pycqa.org/en/latest/user/error-codes.html
-    linter_rules_configuration_url: https://flake8.pycqa.org/en/latest/user/configuration.html#project-configuration
-    linter_rules_inline_disable_url: https://flake8.pycqa.org/en/3.1.1/user/ignoring-errors.html#in-line-ignoring-errors
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    cli_lint_mode_project_exclude_arg_name: "--extend-exclude="
-    cli_lint_mode_project_exclude_separator: ","
-    cli_lint_mode_project_exclude_config_key: ["flake8.extend-exclude", "flake8.extend_exclude"]
-    config_file_name: .flake8
-    cli_config_arg_name: "--config"
-    cli_lint_errors_count: total_lines
-    common_linter_errors:
-      - identifier: PYTHON_FLAKE8_ERROR_PLUGIN_LOAD
-        regex: '"[A-Za-z0-9_-]+" failed during execution due to'
-        message: |-
-          A flake8 plugin (e.g. flake8-bugbear, flake8-docstrings) crashed while loading or running.
-          This usually means the plugin version is incompatible with the pinned flake8 version, or the plugin is not installed.
-          Resolutions:
-            - Pre-install the missing/compatible plugin into flake8's venv via a pre-command in your .mega-linter.yml:
-                PYTHON_FLAKE8_PRE_COMMANDS:
-                  - command: "pip install flake8-bugbear"
-                    venv: flake8
-                    continue_if_failed: false
-            - Temporarily remove the plugin from your flake8 config to confirm the trigger.
-            - Run with `--verbose` locally to see which plugin emitted the error.
-      - identifier: PYTHON_FLAKE8_ERROR_CONFIG_INVALID
-        regex: "(There was a critical error during execution of Flake8|Error: Invalid value for|tomllib(\\.|: ).+(Invalid|Error)|Error parsing config file)"
-        message: |-
-          flake8 could not parse its configuration file (`.flake8`, `setup.cfg`, or `pyproject.toml`).
-          Resolutions:
-            - Validate the INI/TOML syntax of the config file.
-            - Make sure option keys (e.g. `max-line-length`, `select`, `ignore`) are spelled correctly.
-            - Remove the custom config to confirm the issue is config-related.
-    examples:
-      - "flake8 myfile.py"
-      - "flake8 --config .flake8 myfile.py"
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=pypi depName=flake8
-          ARG PIP_FLAKE8_VERSION=7.5.0
-      pip:
-        - flake8==${PIP_FLAKE8_VERSION}
-    native_install:
-      method: pip
-      requires:
-        - runtime: python
-          version: ">=3.11"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-    ide:
-      vscode:
-        - name: Flake8
-          url: https://marketplace.visualstudio.com/items?itemName=ms-python.flake8
-  # ISORT
-  - linter_name: isort
-    deprecated: true
-    deprecated_description: "Deprecated in favor of Ruff (ruff check --select E,F,W,I,S). Ruff natively implements Black formatting, isort import sorting, Flake8 style rules, and Bandit security checks (S series) running 30–100× faster."
-    descriptor_flavors_exclude:
-      - cupcake
-    file_extensions:
-      - ".py"
-      - ".pyi"
-      - ".pyx"
-      - ".pxd"
-    linter_text: |
-      **isort** is the definitive Python import sorting tool that automatically organizes and standardizes import statements according to configurable rules. It serves as an essential companion to code formatters for maintaining clean, professional Python codebases.
-
-      **Key Features:**
-
-      - **Intelligent Import Grouping**: Automatically separates standard library, third-party, and local imports into distinct sections
-      - **Alphabetical Sorting**: Sorts imports within each group alphabetically for consistent ordering
-      - **Multiple Profiles**: Built-in profiles for popular formatters (Black, Django, Google, etc.) ensuring seamless integration
-      - **Highly Configurable**: Extensive configuration options for custom sorting rules, line lengths, and import styles
-      - **Multi-line Import Handling**: Smart formatting of long import statements with various wrapping styles
-      - **Namespace Package Support**: Proper handling of namespace packages and relative imports
-      - **Performance Optimized**: Fast processing suitable for large codebases
-      - **Format Compatibility**: Perfect integration with Black, autopep8, and other Python formatting tools
-      - **Diff Mode**: Check-only mode for validation without modification
-    name: PYTHON_ISORT
-    is_formatter: true
-    linter_url: https://pycqa.github.io/isort/
-    linter_repo: https://github.com/PyCQA/isort
-    linter_megalinter_ref_url: "no"
-    linter_spdx_license: MIT
-    linter_speed: 5
-    linter_banner_image_url: https://raw.githubusercontent.com/pycqa/isort/develop/art/logo_large.png
-    linter_rules_configuration_url: https://pycqa.github.io/isort/docs/configuration/config_files.html
-    linter_rules_inline_disable_url: https://pycqa.github.io/isort/docs/configuration/action_comments.html
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    config_file_name: .isort.cfg
-    cli_config_arg_name: "--settings-file"
-    cli_lint_extra_args:
-      - "--diff"
-      - "--check"
-      - "--profile"
-      - "black"
-    cli_lint_mode_project_exclude_arg_name: "--extend-skip"
-    cli_lint_mode_project_exclude_config_key: ["settings.extend_skip", "isort.extend_skip", "tool.isort.extend_skip"]
-    cli_lint_mode_project_extra_args_after:
-      - .
-    cli_lint_fix_arg_name: "--megalinter-fix-flag" # Workaround for PythonBlackOrIsortLinter class behavior
-    cli_lint_fix_remove_args:
-      - "--diff"
-      - "--check"
-    cli_lint_errors_count: regex_count
-    cli_lint_errors_regex: "\\@\\@ (.*) \\@\\@"
-    examples:
-      - "isort --diff --check --profile black myfile.py"
-      - "isort --diff --check --profile black --settings-file .isort.cfg myfile.py"
-      - "isort --profile black --settings-file .isort.cfg myfile.py"
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=pypi depName=black
-          ARG PIP_BLACK_VERSION=26.10.1
-        - |-
-          # renovate: datasource=pypi depName=isort
-          ARG PIP_ISORT_VERSION=9.0.2
-      pip:
-        - black==${PIP_BLACK_VERSION}
-        - isort==${PIP_ISORT_VERSION}
-    native_install:
-      method: pip
-      requires:
-        - runtime: python
-          version: ">=3.10"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-    ide:
-      emacs:
-        - name: py-isort.el
-          url: https://github.com/paetzke/py-isort.el
-      vim:
-        - name: ale
-          url: https://github.com/w0rp/ale
-        - name: vim-isort
-          url: https://github.com/fisadev/vim-isort#installation
-      vscode:
-        - name: VSCode Python Extension
-          url: https://github.com/Microsoft/vscode-python
-  # MYPY
-  - linter_name: mypy
-    deprecated: true
-    deprecated_description: "Deprecated in favor of Astral ty (PYTHON_TY). ty is a high-performance Python type checker written in Rust, running 10-50x faster with instant salsa-based diagnostics."
-    descriptor_flavors_exclude:
-      - cupcake
-    name: PYTHON_MYPY
-    file_extensions:
-      - ".py"
-      - ".pyi"
-    linter_text: |
-      **MyPy** is Python's premier static type checker that brings optional static typing to Python through gradual typing. It analyzes type annotations and infers types to catch bugs before runtime, bridging the gap between Python's dynamic nature and static analysis benefits.
-
-      **Key Features:**
-
-      - **Gradual Typing Support**: Add type checking incrementally to existing codebases without requiring full annotation coverage
-      - **Type Inference**: Advanced type inference engine that understands Python idioms and can deduce types even without explicit annotations
-      - **Protocol Support**: Duck typing through protocols, enabling structural subtyping for flexible type checking
-      - **Generic Types**: Full support for generic types, type variables, and complex type relationships
-      - **Plugin Architecture**: Extensible with plugins for popular frameworks like Django, SQLAlchemy, and dataclasses
-      - **Incremental Checking**: Fast incremental analysis that only re-checks modified files and their dependencies
-      - **Strict Mode Options**: Configurable strictness levels from permissive to extremely strict type checking
-      - **Python Version Compatibility**: Supports multiple Python versions and can check compatibility across versions
-
-      **Note**: If you don't use Python static typing, disable this linter by adding `PYTHON_MYPY` to `DISABLE_LINTERS` in your `.mega-linter.yml` config file.
-    linter_url: https://mypy.readthedocs.io/en/stable/
-    linter_repo: https://github.com/python/mypy
-    linter_spdx_license: MIT
-    linter_speed: 1
-    linter_banner_image_url: http://mypy-lang.org/static/mypy_light.svg
-    linter_rules_configuration_url: https://mypy.readthedocs.io/en/stable/config_file.html
-    linter_rules_inline_disable_url: https://mypy.readthedocs.io/en/stable/inline_config.html#inline-config
-    linter_megalinter_ref_url: never
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    cli_lint_extra_args:
-      - "--install-types"
-      - "--non-interactive"
-    cli_lint_mode_project_exclude_arg_name: "--exclude"
-    cli_lint_mode_project_exclude_arg_value: "/{{DIR}}/"
-    cli_lint_mode_project_extra_args_after:
-      - .
-    cli_lint_mode_project_config_paths_regex: "(?m)^\\[(?:tool\\.)?mypy\\][ \\t]*\\n(?:(?!\\[).*\\n)*?[ \\t]*(?:files|packages|modules)[ \\t]*="
-    cli_lint_errors_count: regex_sum
-    cli_lint_errors_regex: "Found ([0-9]+) error"
-    cli_config_arg_name: "--config-file"
-    cli_version_arg_name: "--version"
-    config_file_name: ".mypy.ini"
-    common_linter_errors:
-      - identifier: PYTHON_MYPY_ERROR_STUBS_INSTALL_FAILED
-        regex: "(error installing types|installation of type stubs (failed|did not succeed)|mypy: error: --install-types)"
-        message: |-
-          mypy attempted to auto-install missing type stubs (`--install-types`) but the pip step failed.
-          This is usually a network issue or a missing stub package on PyPI.
-          Resolutions:
-            - Pre-install the required `types-*` stub packages into mypy's venv via a pre-command in your .mega-linter.yml:
-                PYTHON_MYPY_PRE_COMMANDS:
-                  - command: "pip install types-requests types-PyYAML"
-                    venv: mypy
-                    continue_if_failed: false
-            - For libraries with no published stubs, silence the import with `# type: ignore[import]` or add them to `ignore_missing_imports` in your mypy config.
-      - identifier: PYTHON_MYPY_ERROR_CONFIG_INVALID
-        regex: "(mypy: error: Invalid (config|option)|mypy: error: Configuration file|configparser\\.(Error|ParsingError)|tomllib\\.TOMLDecodeError.+mypy)"
-        message: |-
-          mypy could not parse its configuration file (`.mypy.ini`, `mypy.ini`, `pyproject.toml [tool.mypy]`, or `setup.cfg`).
-          Resolutions:
-            - Validate INI/TOML syntax of the mypy config.
-            - Check option names match the pinned mypy version's documentation.
-            - Remove the custom config to confirm the issue is config-related.
-      - identifier: PYTHON_MYPY_ERROR_DAEMON_CRASH
-        regex: "(INTERNAL ERROR|Traceback \\(most recent call last\\)|mypy crashed)"
-        message: |-
-          mypy crashed with an internal error. This usually indicates a bug in mypy or an interaction with a plugin.
-          Resolutions:
-            - Clear the mypy cache (MegaLinter sets `MYPY_CACHE_DIR=/tmp/.mypy_cache`, but stale data can persist between runs in long-lived environments).
-            - Disable mypy plugins (`plugins = ...` in your config) one by one to narrow the cause.
-            - Report the traceback to https://github.com/python/mypy/issues.
-    version_extract_regex: "(?<=mypy )\\d+(\\.\\d+)+"
-    test_folder: python_mypy
-    examples:
-      - "mypy myfile.py"
-      - "mypy --config-file .mypy.yml myfile.py"
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=pypi depName=mypy
-          ARG PIP_MYPY_VERSION=2.4.1
-        - ENV MYPY_CACHE_DIR=/tmp/.mypy_cache # Avoid mypy cache to mess with other linters
-      pip:
-        - mypy==${PIP_MYPY_VERSION}
-    native_install:
-      method: pip
-      requires:
-        - runtime: python
-          version: ">=3.10"
-      env:
-        MYPY_CACHE_DIR: "{{NATIVE_INSTALL_DIR}}/mypy-cache"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-    ide:
-      emacs:
-        - name: Flycheck mypy
-          url: https://github.com/lbolla/emacs-flycheck-mypy
-      idea:
-        - name: mypy-official
-          url: https://plugins.jetbrains.com/plugin/13348-mypy-official-/
-      sublime:
-        - name: SublimeLinter-contrib-mypy
-          url: https://github.com/fredcallaway/SublimeLinter-contrib-mypy
-      vim:
-        - name: Ale
-          url: https://github.com/dense-analysis/ale
-        - name: Syntastic
-          url: https://github.com/vim-syntastic/syntastic
-      vscode:
-        - name: Mypy
-          url: https://marketplace.visualstudio.com/items?itemName=matangover.mypy
-
-  # NBQA-MYPY
-  - linter_name: nbqa
-    deprecated: true
-    deprecated_description: "Deprecated in favor of Astral ty (PYTHON_TY). ty provides high-speed Python type checking in Rust."
-    descriptor_flavors_exclude:
-      - cupcake
-    name: PYTHON_NBQA_MYPY
-    file_extensions:
-      - ".ipynb"
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    cli_lint_extra_args:
-      - "mypy"
-      - "--install-types"
-      - "--non-interactive"
-    cli_lint_mode_project_exclude_arg_name: "--nbqa-exclude"
-    cli_lint_mode_project_exclude_arg_value: "(^|/){{DIR}}/"
-    cli_lint_mode_project_exclude_separator: "|"
-    cli_lint_mode_project_exclude_config_key: "tool.nbqa.exclude.mypy"
-    cli_lint_mode_project_exclude_config_files: ["pyproject.toml"]
-    cli_lint_mode_project_extra_args_after:
-      - .
-    cli_lint_errors_count: regex_sum
-    cli_lint_errors_regex: "Found ([0-9]+) error"
-    cli_version_arg_name: "--version"
-    version_extract_regex: "(?<=nbqa )\\d+(\\.\\d+)+"
-    # Note: nbqa passes args to the underlying tool (mypy), so we don't use cli_config_arg_name
-    # MyPy will auto-detect config files (pyproject.toml, .mypy.ini, setup.cfg, etc.)
-    common_linter_errors:
-      - identifier: PYTHON_NBQA_MYPY_ERROR_NOTEBOOK_INVALID
-        regex: "(NotJSONError|nbformat\\.reader\\.NotJSONError|Notebook does not appear to be JSON|Failed to read notebook|nbformat\\.validator\\.ValidationError)"
-        message: |-
-          nbqa could not read a Jupyter notebook because the `.ipynb` file is not valid JSON or violates the nbformat schema.
-          Resolutions:
-            - Open the notebook in JupyterLab/VS Code and re-save it to fix the JSON structure.
-            - Check for merge conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`) committed inside the notebook.
-            - Validate the notebook with `jupyter nbformat --validate path/to/notebook.ipynb`.
-      - identifier: PYTHON_NBQA_MYPY_ERROR_TOOL_CRASH
-        regex: "(An error occurred while running nbQA|nbqa\\.cmdline\\.|UnsupportedPackageVersionError)"
-        message: |-
-          nbqa crashed while invoking mypy on a notebook. This typically means the bundled nbqa and mypy versions disagree on calling conventions or an unsupported notebook feature was hit.
-          Resolutions:
-            - Confirm the notebook does not contain Jupyter magic commands (`%%bash`, `!pip ...`) at module scope; nbqa skips them but malformed cells can still trip it up.
-            - Report the traceback to https://github.com/nbQA-dev/nbQA/issues including the failing cell.
-    test_folder: python_nbqa_mypy
-    linter_text: |
-      **nbqa + mypy** provides static type checking for Jupyter notebooks.
-
-      **nbqa** (NoteBook QA) runs standard Python linters on Jupyter notebooks by extracting code cells and running the linter on them. Combined with **mypy**, it brings static type checking to notebook development.
-
-      **Key features:**
-
-      - **Type Checking in Notebooks**: Catch type errors in notebook cells before execution
-      - **Cell-Aware Errors**: Error messages reference correct cell and line numbers
-      - **Mypy Integration**: Uses your existing mypy configuration
-      - **Supports Complex Types**: Handles generics, protocols, type inference, etc.
-      - **Gradual Typing**: Add type hints incrementally to notebooks
-      - **IDE Integration**: Works with Jupyter Lab, VS Code, and other notebook editors
-
-      **Common use cases:**
-      - Type-check data science notebooks before production deployment
-      - Catch type errors in ML model training code
-      - Ensure type consistency across notebook projects
-      - Validate notebook code in CI/CD pipelines
-
-      **Note**: This linter only checks `.ipynb` files. Use PYTHON_MYPY for `.py` and `.pyi` files.
-    linter_url: https://github.com/nbQA-dev/nbQA
-    linter_repo: https://github.com/nbQA-dev/nbQA
-    linter_megalinter_ref_url: https://github.com/nbQA-dev/nbQA#-used-by
-    linter_rules_url: https://github.com/nbQA-dev/nbQA
-    linter_spdx_license: MIT
-    linter_speed: 2
-    examples:
-      - "nbqa mypy myfile.ipynb"
-      - "nbqa mypy --config-file .mypy.ini myfile.ipynb"
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=pypi depName=nbqa
-          ARG PIP_NBQA_VERSION=1.9.1
-        - |-
-          # renovate: datasource=pypi depName=mypy
-          ARG PIP_MYPY_VERSION=2.4.1
-        - ENV MYPY_CACHE_DIR=/tmp/.mypy_cache # Avoid mypy cache to mess with other linters
-      pip:
-        - nbqa==${PIP_NBQA_VERSION}
-        - mypy==${PIP_MYPY_VERSION}
-    native_install:
-      method: pip
-      requires:
-        - runtime: python
-          version: ">=3.10"
-      env:
-        MYPY_CACHE_DIR: "{{NATIVE_INSTALL_DIR}}/mypy-cache"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-  # PyType # NV Not working yet, if anyone wants to complete it, please be my guest :)
-  # - linter_name: pytype
-  #   name: PYTHON_PYTYPE
-  #   linter_text: |
-  #     Optional static typing checks for python, by Google
-
-  #     If you don't use python static typing, you should disable this linter by adding `PYTHON_PYTYPE` in `DISABLE_LINTERS` variable in your `.mega-linter.yml` config file
-  #   linter_url: https://google.github.io/pytype/
-  #   linter_repo: https://github.com/google/pytype
-  #   linter_speed: 1
-  #   linter_rules_inline_disable_url: https://google.github.io/pytype/user_guide.html#silencing-errors
-  #   cli_lint_mode: list_of_files
-  #   supported_cli_lint_modes:
-  #     - file
-  #     - list_of_files
-  #     - project
-  #   cli_lint_mode_project_extra_args_after:
-  #     - .
-  #   config_file_name: pytype.cfg
-  #   cli_lint_errors_count: regex_sum
-  #   cli_lint_errors_regex: "Found ([0-9]+) error"
-  #   test_folder: python_mypy
-  #   examples:
-  #     - "pytype myfile.py myfile2.py"
-  #     - "pytype myfile.py"
-  #   install:
-  #     dockerfile:
-  #       - |-
-  #         # renovate: datasource=pypi depName=pytype
-  #         ARG PIP_PYTYPE_VERSION=2024.10.11
-  #     pip:
-  #       - pytype==${PIP_PYTYPE_VERSION}
-
-  # PYLINT
-  - linter_name: pylint
-    deprecated: true
-    deprecated_description: "Deprecated in favor of PYTHON_RUFF. Please use PYTHON_RUFF with Pylint rules (PLC, PLE, PLW) instead."
-    descriptor_flavors_exclude:
-      - cupcake
-    file_extensions:
-      - ".py"
-      - ".pyi"
-    linter_text: |
-      **Pylint** is a comprehensive static code analyzer for Python that goes beyond simple syntax checking. It analyzes your code without actually running it, checking for errors, enforcing coding standards, detecting code smells, and suggesting refactoring opportunities.
-
-      **Key features:**
-
-      - **Advanced Code Inference**: Uses internal code representation (astroid) to infer actual values and types, catching more complex issues
-      - **Comprehensive Analysis**: Checks for errors, style violations, code complexity, and potential bugs
-      - **Highly Configurable**: Extensive configuration options to customize rules and integrate with any coding standard
-      - **Plugin Ecosystem**: Rich ecosystem of plugins for popular frameworks (Django, Pydantic, etc.)
-      - **Smart Detection**: Not just trusting type hints - infers actual usage patterns and relationships
-      - **Refactoring Suggestions**: Identifies code smells and suggests improvements for maintainability
-
-      **What makes Pylint unique:**
-
-      - **Deep Inference Engine**: Can detect issues like `import logging as argparse` and catch calls like `argparse.error()` as incorrect
-      - **Thorough Analysis**: More comprehensive than other linters, though slower due to detailed inspection
-      - **Opinionated Checks**: Includes optional checks for code quality beyond basic syntax
-
-      **Common checks include:**
-
-      - **Error Detection**: Syntax errors, undefined variables, import issues
-      - **Code Quality**: Unused variables, too many arguments, complex functions
-      - **Style Enforcement**: PEP 8 compliance, naming conventions, documentation standards
-      - **Design Analysis**: Class design, inheritance issues, interface violations
-      - **Security**: Basic security anti-patterns and vulnerable code constructs
-
-      **Additional tools included:**
-
-      - **Pyreverse**: Generates UML package and class diagrams
-      - **Symilar**: Duplicate code detection integrated into pylint
-
-      For legacy projects, start with `--errors-only` flag and progressively enable more checks. Works best alongside other tools like ruff, mypy, black, and isort for comprehensive Python code quality.
-    name: PYTHON_PYLINT
-    linter_url: https://pylint.readthedocs.io
-    linter_repo: https://github.com/pylint-dev/pylint
-    linter_megalinter_ref_url: https://github.com/pylint-dev/pylint/pull/11237
-    linter_spdx_license: GPL-2.0
-    linter_speed: 2
-    linter_rules_url: https://pylint.readthedocs.io/en/stable/user_guide/messages/index.html
-    linter_image_url: https://raw.githubusercontent.com/pylint-dev/pylint/main/doc/logo.svg
-    linter_rules_configuration_url: https://pylint.readthedocs.io/en/stable/user_guide/configuration/index.html
-    linter_rules_inline_disable_url: https://pylint.readthedocs.io/en/stable/user_guide/messages/message_control.html
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    cli_lint_mode_project_exclude_arg_name: "--ignore="
-    cli_lint_mode_project_exclude_separator: ","
-    cli_lint_mode_project_exclude_seed_values: ["CVS"]
-    cli_lint_mode_project_exclude_config_key: ["*.ignore", "tool.pylint.*.ignore"]
-    cli_lint_mode_project_extra_args_after:
-      - .
-    cli_lint_mode_project_config_paths_regex: "(?mi)^\\[(?:tool\\.pylint\\.)?(?:main|master)\\][ \\t]*\\n(?:(?!\\[).*\\n)*?[ \\t]*files[ \\t]*="
-    config_file_name: .pylintrc
-    cli_config_arg_name: "--rcfile"
-    cli_lint_errors_count: regex_count
-    cli_lint_errors_regex: ":([0-9]+):([0-9]+):"
-    common_linter_errors:
-      - identifier: PYTHON_PYLINT_ERROR_CONFIG_PARSE
-        regex: "(Error in provided config file|Unable to load configuration|Error while parsing|argument --[A-Za-z-]+: )"
-        message: |-
-          pylint could not parse the configuration file (e.g. `.pylintrc`, `pyproject.toml`).
-          Resolutions:
-            - Validate the TOML/INI syntax of your pylint config.
-            - Make sure option names and section headers (`[MESSAGES CONTROL]`, `[tool.pylint.*]`) are correct for the pinned pylint version.
-            - Run `pylint --generate-rcfile` to compare with a known-good template.
-      - identifier: PYTHON_PYLINT_ERROR_PLUGIN_LOAD
-        regex: "(Unable to load plugin|Problem importing module)"
-        message: |-
-          pylint failed to load a plugin declared in `load-plugins` (e.g. `pylint-django`, `pylint-pydantic`).
-          Resolutions:
-            - Check the plugin name spelling in your pylint config.
-            - Pre-install the missing plugin into pylint's venv via a pre-command in your .mega-linter.yml:
-                PYTHON_PYLINT_PRE_COMMANDS:
-                  - command: "pip install pylint-django"
-                    venv: pylint
-                    continue_if_failed: false
-            - Or remove the plugin from `load-plugins` if it is not needed.
-      - identifier: PYTHON_PYLINT_ERROR_ASTROID_CRASH
-        regex: "(astroid-error|Fatal error while checking |F0002|AstroidError)"
-        message: |-
-          pylint crashed inside its astroid AST parser. This is usually a pylint/astroid bug, not a problem with your code.
-          Resolutions:
-            - Run pylint with `--errors-only` to narrow the offending file.
-            - Disable astroid plugins (`load-plugins`) one by one to find the culprit.
-            - Report the traceback to https://github.com/pylint-dev/pylint/issues.
-    examples:
-      - "pylint myfile.py"
-      - "pylint --rcfile .python-lint myfile.py"
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=pypi depName=pylint
-          ARG PIP_PYLINT_VERSION=4.1.3
-        - |-
-          # renovate: datasource=pypi depName=typing-extensions
-          ARG PIP_TYPING_EXTENSIONS_VERSION=4.16.0
-      pip:
-        - pylint==${PIP_PYLINT_VERSION}
-        - typing-extensions==${PIP_TYPING_EXTENSIONS_VERSION}
-    native_install:
-      method: pip
-      requires:
-        - runtime: python
-          version: ">=3.10"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-    ide:
-      eclipse:
-        - name: PyLint
-          url: https://pydev.org/manual_adv_pylint.html
-      idea:
-        - name: PyCharm (Native Support)
-          url: https://www.jetbrains.com/pycharm/
-      visual_studio:
-        - name: Native Support
-          url: https://learn.microsoft.com/visualstudio/python/linting-python-code
-      vscode:
-        - name: Pylint
-          url: https://marketplace.visualstudio.com/items?itemName=ms-python.pylint
-  # PyRight
-  - class: PyrightLinter
-    linter_name: pyright
-    deprecated: true
-    deprecated_description: "Deprecated in favor of Astral ty (PYTHON_TY). ty provides high-speed type checking in Rust without requiring a Node.js runtime."
-    descriptor_flavors_exclude:
-      - cupcake
-    name: PYTHON_PYRIGHT
-    file_extensions:
-      - ".py"
-      - ".pyi"
-    linter_text: |
-      **Pyright** is Microsoft's high-performance static type checker for Python that provides fast, accurate type analysis. It serves as a powerful alternative to MyPy with focus on speed and developer experience.
-
-      **Key Features:**
-
-      - **High Performance**: Lightning-fast type checking with incremental analysis and efficient caching
-      - **Advanced Type Features**: Full support for generics, protocols, type unions, literal types, and advanced Python typing features
-      - **Configuration Flexibility**: Comprehensive configuration options through pyrightconfig.json for fine-tuned type checking
-      - **Multi-Python Support**: Can analyze code for different Python versions and check version compatibility
-      - **Import Resolution**: Sophisticated import resolution handling complex package structures and namespace packages
-      - **Type Inference**: Advanced type inference engine that minimizes the need for explicit type annotations
-      - **Strict Mode Support**: Configurable strictness levels from basic checking to comprehensive type safety enforcement
-      - **Cross-Platform**: Consistent behavior across Windows, macOS, and Linux development environments
-
-      **Note**: If you don't use Python static typing, disable this linter by adding `PYTHON_PYRIGHT` to `DISABLE_LINTERS` in your `.mega-linter.yml` config file.
-    linter_url: https://github.com/Microsoft/pyright
-    linter_rules_url: https://github.com/microsoft/pyright#type-checking-features
-    linter_repo: https://github.com/microsoft/pyright
-    linter_megalinter_ref_url: https://microsoft.github.io/pyright/#/ci-integration
-    linter_spdx_license: MIT
-    linter_banner_image_url: https://github.com/microsoft/pyright/raw/main/docs/img/PyrightLarge.png
-    linter_speed: 1
-    linter_rules_configuration_url: https://github.com/microsoft/pyright/blob/main/docs/configuration.md
-    linter_rules_inline_disable_url: https://github.com/microsoft/pyright/blob/main/docs/comments.md#file-level-type-controls
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    cli_lint_mode_project_extra_args_after:
-      - .
-    cli_lint_mode_project_config_paths_regex: "\"include\"\\s*:"
-    config_file_name: pyrightconfig.json
-    cli_config_arg_name: -p
-    cli_lint_errors_count: regex_sum
-    cli_lint_errors_regex: "([0-9]+) errors,"
-    test_folder: python_mypy
-    examples:
-      - "pyright myfile.py myfile2.py"
-      - "pyright myfile.py"
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=npm depName=pyright
-          ARG NPM_PYRIGHT_VERSION=1.1.414
-      npm:
-        - pyright@${NPM_PYRIGHT_VERSION}
-    native_install:
-      method: npm
-      requires:
-        - runtime: node
-          version: ">=14"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-    ide:
-      emacs:
-        - name: LSP-pyright
-          url: https://github.com/emacs-lsp/lsp-pyright
-      sublime:
-        - name: LSP-pyright
-          url: https://packagecontrol.io/packages/LSP-pyright
-      vim:
-        - name: Ale
-          url: https://github.com/dense-analysis/ale
-        - name: coc-pyright
-          url: https://github.com/fannheyward/coc-pyright
-      vscode:
-        - name: PyRight
-          url: https://marketplace.visualstudio.com/items?itemName=ms-pyright.pyright
-

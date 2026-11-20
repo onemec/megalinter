@@ -317,30 +317,30 @@ ARG PHP_FRIENDSOFPHP_PHP_CS_FIXER_VERSION=v3.95.28
 # renovate: datasource=nuget depName=PSScriptAnalyzer registryUrl=https://www.powershellgallery.com/api/v2/
 ARG PSSA_VERSION='1.25.0'
 
-# renovate: datasource=pypi depName=ruff
-ARG PIP_RUFF_VERSION=0.17.3
-# renovate: datasource=pypi depName=ty
-ARG PIP_TY_VERSION=0.0.100
-# renovate: datasource=pypi depName=bandit
-ARG PIP_BANDIT_VERSION=1.9.4
-# renovate: datasource=pypi depName=bandit_sarif_formatter
-ARG PIP_BANDIT_SARIF_FORMATTER_VERSION=1.1.1
+# renovate: datasource=pypi depName=pylint
+ARG PIP_PYLINT_VERSION=4.1.3
+# renovate: datasource=pypi depName=typing-extensions
+ARG PIP_TYPING_EXTENSIONS_VERSION=4.16.0
 # renovate: datasource=pypi depName=black
 ARG PIP_BLACK_VERSION=26.10.1
 # renovate: datasource=pypi depName=flake8
 ARG PIP_FLAKE8_VERSION=7.5.0
 # renovate: datasource=pypi depName=isort
 ARG PIP_ISORT_VERSION=9.0.2
+# renovate: datasource=pypi depName=bandit
+ARG PIP_BANDIT_VERSION=1.9.4
+# renovate: datasource=pypi depName=bandit_sarif_formatter
+ARG PIP_BANDIT_SARIF_FORMATTER_VERSION=1.1.1
 # renovate: datasource=pypi depName=mypy
 ARG PIP_MYPY_VERSION=2.4.1
 # renovate: datasource=pypi depName=nbqa
 ARG PIP_NBQA_VERSION=1.9.1
-# renovate: datasource=pypi depName=pylint
-ARG PIP_PYLINT_VERSION=4.1.3
-# renovate: datasource=pypi depName=typing-extensions
-ARG PIP_TYPING_EXTENSIONS_VERSION=4.16.0
 # renovate: datasource=npm depName=pyright
 ARG NPM_PYRIGHT_VERSION=1.1.414
+# renovate: datasource=pypi depName=ruff
+ARG PIP_RUFF_VERSION=0.17.3
+# renovate: datasource=pypi depName=ty
+ARG PIP_TY_VERSION=0.0.100
 # renovate: datasource=github-tags depName=nxadm/rakudo-pkg extractVersion=^v(?<version>.+)$
 ARG RAKU_RAKU_VERSION=2026.09
 ARG RAKU_RAKU_ALPINE_VERSION=3.23
@@ -643,22 +643,10 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && VIRTUAL_ENV="/venvs/rumdl" uv pip install rumdl==${PIP_RUMDL_VERSION} \
     && VIRTUAL_ENV="/venvs/rumdl" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
     && VIRTUAL_ENV="/venvs/rumdl" rm -rf /venvs/rumdl/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/ruff" \
-    && VIRTUAL_ENV="/venvs/ruff" uv pip install ruff==${PIP_RUFF_VERSION} \
-    && VIRTUAL_ENV="/venvs/ruff" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/ruff" rm -rf /venvs/ruff/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/ruff-format" \
-    && VIRTUAL_ENV="/venvs/ruff-format" uv pip install ruff==${PIP_RUFF_VERSION} \
-    && VIRTUAL_ENV="/venvs/ruff-format" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/ruff-format" rm -rf /venvs/ruff-format/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/ty" \
-    && VIRTUAL_ENV="/venvs/ty" uv pip install ty==${PIP_TY_VERSION} \
-    && VIRTUAL_ENV="/venvs/ty" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/ty" rm -rf /venvs/ty/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/bandit" \
-    && VIRTUAL_ENV="/venvs/bandit" uv pip install bandit==${PIP_BANDIT_VERSION} bandit_sarif_formatter==${PIP_BANDIT_SARIF_FORMATTER_VERSION} bandit[toml]==${PIP_BANDIT_VERSION} \
-    && VIRTUAL_ENV="/venvs/bandit" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/bandit" rm -rf /venvs/bandit/lib/python3*/site-packages/setuptools/_vendor/wheel* \
+    && uv venv --seed --no-project --no-managed-python "/venvs/pylint" \
+    && VIRTUAL_ENV="/venvs/pylint" uv pip install pylint==${PIP_PYLINT_VERSION} typing-extensions==${PIP_TYPING_EXTENSIONS_VERSION} \
+    && VIRTUAL_ENV="/venvs/pylint" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
+    && VIRTUAL_ENV="/venvs/pylint" rm -rf /venvs/pylint/lib/python3*/site-packages/setuptools/_vendor/wheel* \
     && uv venv --seed --no-project --no-managed-python "/venvs/black" \
     && VIRTUAL_ENV="/venvs/black" uv pip install black[jupyter]==${PIP_BLACK_VERSION} \
     && VIRTUAL_ENV="/venvs/black" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
@@ -671,6 +659,10 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && VIRTUAL_ENV="/venvs/isort" uv pip install black==${PIP_BLACK_VERSION} isort==${PIP_ISORT_VERSION} \
     && VIRTUAL_ENV="/venvs/isort" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
     && VIRTUAL_ENV="/venvs/isort" rm -rf /venvs/isort/lib/python3*/site-packages/setuptools/_vendor/wheel* \
+    && uv venv --seed --no-project --no-managed-python "/venvs/bandit" \
+    && VIRTUAL_ENV="/venvs/bandit" uv pip install bandit==${PIP_BANDIT_VERSION} bandit_sarif_formatter==${PIP_BANDIT_SARIF_FORMATTER_VERSION} bandit[toml]==${PIP_BANDIT_VERSION} \
+    && VIRTUAL_ENV="/venvs/bandit" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
+    && VIRTUAL_ENV="/venvs/bandit" rm -rf /venvs/bandit/lib/python3*/site-packages/setuptools/_vendor/wheel* \
     && uv venv --seed --no-project --no-managed-python "/venvs/mypy" \
     && VIRTUAL_ENV="/venvs/mypy" uv pip install mypy==${PIP_MYPY_VERSION} \
     && VIRTUAL_ENV="/venvs/mypy" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
@@ -679,10 +671,18 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && VIRTUAL_ENV="/venvs/nbqa" uv pip install nbqa==${PIP_NBQA_VERSION} mypy==${PIP_MYPY_VERSION} \
     && VIRTUAL_ENV="/venvs/nbqa" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
     && VIRTUAL_ENV="/venvs/nbqa" rm -rf /venvs/nbqa/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/pylint" \
-    && VIRTUAL_ENV="/venvs/pylint" uv pip install pylint==${PIP_PYLINT_VERSION} typing-extensions==${PIP_TYPING_EXTENSIONS_VERSION} \
-    && VIRTUAL_ENV="/venvs/pylint" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/pylint" rm -rf /venvs/pylint/lib/python3*/site-packages/setuptools/_vendor/wheel* \
+    && uv venv --seed --no-project --no-managed-python "/venvs/ruff" \
+    && VIRTUAL_ENV="/venvs/ruff" uv pip install ruff==${PIP_RUFF_VERSION} \
+    && VIRTUAL_ENV="/venvs/ruff" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
+    && VIRTUAL_ENV="/venvs/ruff" rm -rf /venvs/ruff/lib/python3*/site-packages/setuptools/_vendor/wheel* \
+    && uv venv --seed --no-project --no-managed-python "/venvs/ruff-format" \
+    && VIRTUAL_ENV="/venvs/ruff-format" uv pip install ruff==${PIP_RUFF_VERSION} \
+    && VIRTUAL_ENV="/venvs/ruff-format" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
+    && VIRTUAL_ENV="/venvs/ruff-format" rm -rf /venvs/ruff-format/lib/python3*/site-packages/setuptools/_vendor/wheel* \
+    && uv venv --seed --no-project --no-managed-python "/venvs/ty" \
+    && VIRTUAL_ENV="/venvs/ty" uv pip install ty==${PIP_TY_VERSION} \
+    && VIRTUAL_ENV="/venvs/ty" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
+    && VIRTUAL_ENV="/venvs/ty" rm -rf /venvs/ty/lib/python3*/site-packages/setuptools/_vendor/wheel* \
     && uv venv --seed --no-project --no-managed-python "/venvs/checkov" \
     && VIRTUAL_ENV="/venvs/checkov" uv pip install checkov==${PIP_CHECKOV_VERSION} \
     && VIRTUAL_ENV="/venvs/checkov" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
@@ -734,7 +734,7 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && find /venvs \( -type f \( -iname \*.pyc -o -iname \*.pyo \) -o -type d -iname __pycache__ \) -delete \
     && rm -rf /root/.cache \
     && apk del .ml-build-deps
-ENV PATH="${PATH}":/venvs/ansible-lint/bin:/venvs/cpplint/bin:/venvs/cfn-lint/bin:/venvs/djlint/bin:/venvs/rumdl/bin:/venvs/ruff/bin:/venvs/ruff-format/bin:/venvs/ty/bin:/venvs/bandit/bin:/venvs/black/bin:/venvs/flake8/bin:/venvs/isort/bin:/venvs/mypy/bin:/venvs/nbqa/bin:/venvs/pylint/bin:/venvs/checkov/bin:/venvs/semgrep/bin:/venvs/robocop/bin:/venvs/rst-lint/bin:/venvs/rstcheck/bin:/venvs/rstfmt/bin:/venvs/snakemake/bin:/venvs/snakefmt/bin:/venvs/proselint/bin:/venvs/codespell/bin:/venvs/sqlfluff/bin:/venvs/yamllint/bin
+ENV PATH="${PATH}":/venvs/ansible-lint/bin:/venvs/cpplint/bin:/venvs/cfn-lint/bin:/venvs/djlint/bin:/venvs/rumdl/bin:/venvs/pylint/bin:/venvs/black/bin:/venvs/flake8/bin:/venvs/isort/bin:/venvs/bandit/bin:/venvs/mypy/bin:/venvs/nbqa/bin:/venvs/ruff/bin:/venvs/ruff-format/bin:/venvs/ty/bin:/venvs/checkov/bin:/venvs/semgrep/bin:/venvs/robocop/bin:/venvs/rst-lint/bin:/venvs/rstcheck/bin:/venvs/rstfmt/bin:/venvs/snakemake/bin:/venvs/snakefmt/bin:/venvs/proselint/bin:/venvs/codespell/bin:/venvs/sqlfluff/bin:/venvs/yamllint/bin
 #PIPVENV__END
 
 ############################
@@ -1151,20 +1151,20 @@ RUN pwsh -c 'Install-Module -Name PSScriptAnalyzer -RequiredVersion ${PSSA_VERSI
 # RUN pwsh -c 'Install-Module -Name PSScriptAnalyzer -RequiredVersion ${PSSA_VERSION} -Scope AllUsers -Force -ErrorAction Stop'
 # protolint installation
 # Managed with COPY --link --from=protolint /usr/local/bin/protolint /usr/bin/
-# ruff installation
-# ruff-format installation
-# ty installation
-# bandit installation
+# pylint installation
 # black installation
 # flake8 installation
 # isort installation
+# bandit installation
 # mypy installation
 ENV MYPY_CACHE_DIR=/tmp/.mypy_cache
 # nbqa installation
 # Next line commented because already managed by another linter
 # ENV MYPY_CACHE_DIR=/tmp/.mypy_cache
-# pylint installation
 # pyright installation
+# ruff installation
+# ruff-format installation
+# ty installation
 # lintr installation
 # R packages are compiled from source during installation: the
 # toolchain and -dev headers are only needed within this RUN and

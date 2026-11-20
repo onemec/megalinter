@@ -952,3 +952,11 @@ CVE-2026-114939
 CVE-2026-114940
 CVE-2026-114941
 CVE-2026-114942
+
+# --- taffydb 2.6.2 & python-ecdsa 0.19.2 ---
+# - CVE-2019-10790 (taffydb): Internal property tampering in taffydb 2.6.2.
+#   Transitive dependency in js tooling; no fix available upstream.
+# - CVE-2024-23342 (ecdsa): Minerva timing attack against ECDSA signature generation.
+#   Linters run in short-lived offline CI containers without cryptographic signing endpoints.
+CVE-2019-10790
+CVE-2024-23342
