@@ -932,3 +932,31 @@ CVE-2026-114613
 # Remove once @salesforce/plugin-info drops marked-terminal 4.x or moves to marked >= 4.0.10.
 CVE-2022-21680
 CVE-2022-21681
+
+# --- mcp 1.29.0 & containerd v2.4.1 (Trivy scanner binary) ---
+# - CVE-2026-115563 (mcp): OAuth client token handling in Model Context Protocol Python SDK.
+#   MegaLinter does not expose or interact with MCP OAuth client flows.
+# - CVE-2026-95839 (containerd): daemon crash via malformed digest in subject-annotated
+#   descriptor inside usr/local/bin/trivy. Trivy runs as a one-shot CLI tool, not a daemon.
+CVE-2026-115563
+CVE-2026-95839
+
+# --- Alpine openjdk21 (Java linters: pmd, checkstyle, etc.) ---
+# OpenJDK quarterly security update CVEs:
+# - CVE-2026-114938 / CVE-2026-114942: vector masks memory corruption on x86-64.
+# - CVE-2026-114939: Kerberos acceptor flaw; MegaLinter does not use Kerberos auth.
+# - CVE-2026-114940: TLS client connections; Java linters run locally and offline.
+# - CVE-2026-114941: Integer compression flaw in AWT/image processing.
+CVE-2026-114938
+CVE-2026-114939
+CVE-2026-114940
+CVE-2026-114941
+CVE-2026-114942
+
+# --- taffydb 2.6.2 & python-ecdsa 0.19.2 ---
+# - CVE-2019-10790 (taffydb): Internal property tampering in taffydb 2.6.2.
+#   Transitive dependency in js tooling; no fix available upstream.
+# - CVE-2024-23342 (ecdsa): Minerva timing attack against ECDSA signature generation.
+#   Linters run in short-lived offline CI containers without cryptographic signing endpoints.
+CVE-2019-10790
+CVE-2024-23342

@@ -18,6 +18,39 @@ description: How to use ruff (configure, ignore files, ignore errors, help & ver
 - **Modern Python Support**: Full Python 3.13 compatibility with pyproject.toml configuration support
 - **Monorepo-Friendly**: Hierarchical and cascading configuration for complex project structures
 
+### Migrating from Legacy Python Linters (Flake8, Black, isort, Bandit, Pylint)
+
+To replace Flake8, Black, isort, Bandit, and Pylint with Ruff and [`ty`](python_ty.md), configure your `pyproject.toml` (or `.ruff.toml`):
+
+```toml
+[tool.ruff.lint]
+# Tier 1: Direct parity replacements for Flake8, isort, Bandit, and core Pylint
+select = [
+    "E", "F", "W", # Flake8 / pycodestyle / pyflakes
+    "I",           # isort
+    "S",           # Bandit
+    "PLE", "PLW", "PLC", # Pylint (Errors, Warnings, Conventions)
+]
+
+# Tier 2 (Optional): Recommended modernizations & refactoring
+# Uncomment to adopt additional deep inspection:
+# extend-select = [
+#     "B",   # flake8-bugbear
+#     "C4",  # flake8-comprehensions
+#     "UP",  # pyupgrade (syntax modernization)
+#     "PLR", # Pylint refactoring
+# ]
+# ignore = [
+#     "PLR0913", # Too many arguments (> 5)
+#     "PLR2004", # Magic value in comparison
+# ]
+
+[tool.ruff]
+# target-version is inferred automatically from pyproject.toml requires-python
+# or .python-version; only specify if you need a hard override
+line-length = 88 # Matches Black's default
+```
+
 ## ruff documentation
 
 - Version in MegaLinter: **0.17.3**

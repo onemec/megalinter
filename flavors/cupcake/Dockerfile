@@ -249,22 +249,6 @@ ARG PHP_VIMEO_PSALM_VERSION=7.0.3
 ARG PHP_OVERTRUE_PHPLINT_VERSION=9.8.0
 # renovate: datasource=packagist depName=friendsofphp/php-cs-fixer
 ARG PHP_FRIENDSOFPHP_PHP_CS_FIXER_VERSION=v3.95.28
-# renovate: datasource=pypi depName=pylint
-ARG PIP_PYLINT_VERSION=4.1.3
-# renovate: datasource=pypi depName=typing-extensions
-ARG PIP_TYPING_EXTENSIONS_VERSION=4.16.0
-# renovate: datasource=pypi depName=black
-ARG PIP_BLACK_VERSION=26.10.1
-# renovate: datasource=pypi depName=flake8
-ARG PIP_FLAKE8_VERSION=7.5.0
-# renovate: datasource=pypi depName=isort
-ARG PIP_ISORT_VERSION=9.0.2
-# renovate: datasource=pypi depName=mypy
-ARG PIP_MYPY_VERSION=2.4.1
-# renovate: datasource=pypi depName=nbqa
-ARG PIP_NBQA_VERSION=1.9.1
-# renovate: datasource=npm depName=pyright
-ARG NPM_PYRIGHT_VERSION=1.1.414
 # renovate: datasource=pypi depName=ruff
 ARG PIP_RUFF_VERSION=0.17.3
 # renovate: datasource=pypi depName=ty
@@ -533,30 +517,6 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && VIRTUAL_ENV="/venvs/rumdl" uv pip install rumdl==${PIP_RUMDL_VERSION} \
     && VIRTUAL_ENV="/venvs/rumdl" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
     && VIRTUAL_ENV="/venvs/rumdl" rm -rf /venvs/rumdl/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/pylint" \
-    && VIRTUAL_ENV="/venvs/pylint" uv pip install pylint==${PIP_PYLINT_VERSION} typing-extensions==${PIP_TYPING_EXTENSIONS_VERSION} \
-    && VIRTUAL_ENV="/venvs/pylint" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/pylint" rm -rf /venvs/pylint/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/black" \
-    && VIRTUAL_ENV="/venvs/black" uv pip install black[jupyter]==${PIP_BLACK_VERSION} \
-    && VIRTUAL_ENV="/venvs/black" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/black" rm -rf /venvs/black/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/flake8" \
-    && VIRTUAL_ENV="/venvs/flake8" uv pip install flake8==${PIP_FLAKE8_VERSION} \
-    && VIRTUAL_ENV="/venvs/flake8" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/flake8" rm -rf /venvs/flake8/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/isort" \
-    && VIRTUAL_ENV="/venvs/isort" uv pip install black==${PIP_BLACK_VERSION} isort==${PIP_ISORT_VERSION} \
-    && VIRTUAL_ENV="/venvs/isort" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/isort" rm -rf /venvs/isort/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/mypy" \
-    && VIRTUAL_ENV="/venvs/mypy" uv pip install mypy==${PIP_MYPY_VERSION} \
-    && VIRTUAL_ENV="/venvs/mypy" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/mypy" rm -rf /venvs/mypy/lib/python3*/site-packages/setuptools/_vendor/wheel* \
-    && uv venv --seed --no-project --no-managed-python "/venvs/nbqa" \
-    && VIRTUAL_ENV="/venvs/nbqa" uv pip install nbqa==${PIP_NBQA_VERSION} mypy==${PIP_MYPY_VERSION} \
-    && VIRTUAL_ENV="/venvs/nbqa" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
-    && VIRTUAL_ENV="/venvs/nbqa" rm -rf /venvs/nbqa/lib/python3*/site-packages/setuptools/_vendor/wheel* \
     && uv venv --seed --no-project --no-managed-python "/venvs/ruff" \
     && VIRTUAL_ENV="/venvs/ruff" uv pip install ruff==${PIP_RUFF_VERSION} \
     && VIRTUAL_ENV="/venvs/ruff" uv pip install --upgrade "wheel>=0.46.2" "setuptools>=75.8.0" \
@@ -612,7 +572,7 @@ RUN apk add --no-cache --virtual .ml-build-deps gcc libffi-dev make musl-dev rub
     && find /venvs \( -type f \( -iname \*.pyc -o -iname \*.pyo \) -o -type d -iname __pycache__ \) -delete \
     && rm -rf /root/.cache \
     && apk del .ml-build-deps
-ENV PATH="${PATH}":/venvs/ansible-lint/bin:/venvs/cpplint/bin:/venvs/cfn-lint/bin:/venvs/djlint/bin:/venvs/rumdl/bin:/venvs/pylint/bin:/venvs/black/bin:/venvs/flake8/bin:/venvs/isort/bin:/venvs/mypy/bin:/venvs/nbqa/bin:/venvs/ruff/bin:/venvs/ruff-format/bin:/venvs/ty/bin:/venvs/checkov/bin:/venvs/semgrep/bin:/venvs/robocop/bin:/venvs/rst-lint/bin:/venvs/rstcheck/bin:/venvs/rstfmt/bin:/venvs/proselint/bin:/venvs/codespell/bin:/venvs/sqlfluff/bin:/venvs/yamllint/bin
+ENV PATH="${PATH}":/venvs/ansible-lint/bin:/venvs/cpplint/bin:/venvs/cfn-lint/bin:/venvs/djlint/bin:/venvs/rumdl/bin:/venvs/ruff/bin:/venvs/ruff-format/bin:/venvs/ty/bin:/venvs/checkov/bin:/venvs/semgrep/bin:/venvs/robocop/bin:/venvs/rst-lint/bin:/venvs/rstcheck/bin:/venvs/rstfmt/bin:/venvs/proselint/bin:/venvs/codespell/bin:/venvs/sqlfluff/bin:/venvs/yamllint/bin
 #PIPVENV__END
 
 ############################
@@ -655,7 +615,6 @@ RUN npm config set prefix /usr/local \
                 @eslint-react/eslint-plugin@${NPM_ESLINT_REACT_ESLINT_PLUGIN_VERSION} \
                 markdownlint-cli@${NPM_MARKDOWNLINT_CLI_VERSION} \
                 markdown-table-formatter@${NPM_MARKDOWN_TABLE_FORMATTER_VERSION} \
-                pyright@${NPM_PYRIGHT_VERSION} \
                 secretlint@${NPM_SECRETLINT_VERSION} \
                 @secretlint/secretlint-rule-preset-recommend@${NPM_SECRETLINT_SECRETLINT_RULE_PRESET_RECOMMEND_VERSION} \
                 @secretlint/secretlint-formatter-sarif@${NPM_SECRETLINT_SECRETLINT_FORMATTER_SARIF_VERSION} \
@@ -823,16 +782,6 @@ ENV PLINT_MODE=legacy
 # php-cs-fixer installation
 RUN --mount=type=secret,id=GITHUB_TOKEN GITHUB_AUTH_TOKEN="$(cat /run/secrets/GITHUB_TOKEN)" && export GITHUB_AUTH_TOKEN && composer global require friendsofphp/php-cs-fixer:${PHP_FRIENDSOFPHP_PHP_CS_FIXER_VERSION} --with-all-dependencies
 
-# pylint installation
-# black installation
-# flake8 installation
-# isort installation
-# mypy installation
-ENV MYPY_CACHE_DIR=/tmp/.mypy_cache
-# nbqa installation
-# Next line commented because already managed by another linter
-# ENV MYPY_CACHE_DIR=/tmp/.mypy_cache
-# pyright installation
 # ruff installation
 # ruff-format installation
 # ty installation

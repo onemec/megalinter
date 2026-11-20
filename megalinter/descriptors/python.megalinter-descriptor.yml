@@ -47,6 +47,10 @@ linters:
 
       For legacy projects, start with `--errors-only` flag and progressively enable more checks. Works best alongside other tools like ruff, mypy, black, and isort for comprehensive Python code quality.
     name: PYTHON_PYLINT
+    deprecated: true
+    deprecated_description: "PYTHON_PYLINT is deprecated in favor of PYTHON_RUFF (with Pylint rules PLC, PLE, PLR, PLW) and Astral ty (PYTHON_TY). Use PYTHON_RUFF for fast linting with ported Pylint checks and PYTHON_TY for type checking."
+    descriptor_flavors_exclude:
+      - cupcake
     linter_url: https://pylint.readthedocs.io
     linter_repo: https://github.com/pylint-dev/pylint
     linter_megalinter_ref_url: https://github.com/pylint-dev/pylint/pull/11237
@@ -145,6 +149,7 @@ linters:
           url: https://marketplace.visualstudio.com/items?itemName=ms-python.pylint
   # BLACK
   - linter_name: black
+    class: BlackLinter
     file_extensions:
       - ".py"
       - ".pyi"
@@ -185,12 +190,16 @@ linters:
 
       **Note**: Black formats code according to its opinionated style. If you prefer different formatting options, you might consider other formatters, though Black's consistency is its main strength.
     name: PYTHON_BLACK
+    deprecated: true
+    deprecated_description: "PYTHON_BLACK is deprecated in favor of PYTHON_RUFF_FORMAT. Configure PYTHON_DEFAULT_STYLE: ruff or use PYTHON_RUFF_FORMAT directly for 10-100x faster formatting with full Black style parity."
+    descriptor_flavors_exclude:
+      - cupcake
     is_formatter: true
     activation_rules:
       - type: variable
         variable: PYTHON_DEFAULT_STYLE
         expected_value: black
-        default_value: black
+        default_value: ruff
     linter_url: https://black.readthedocs.io/en/stable/
     linter_repo: https://github.com/psf/black
     linter_megalinter_ref_url: "no"
@@ -277,6 +286,10 @@ linters:
       - **Fast Performance**: Efficient scanning with parallel processing capabilities for large codebases
       - **Inline Suppression**: Granular control with per-line and per-file error suppression options
     name: PYTHON_FLAKE8
+    deprecated: true
+    deprecated_description: "PYTHON_FLAKE8 is deprecated in favor of PYTHON_RUFF. Use PYTHON_RUFF with 'ruff check --select E,F,W,I,S' for 10-100x faster linting covering Flake8, isort, and Bandit rules."
+    descriptor_flavors_exclude:
+      - cupcake
     linter_url: https://flake8.pycqa.org
     linter_repo: https://github.com/PyCQA/flake8
     linter_spdx_license: MIT
@@ -368,6 +381,10 @@ linters:
       - **Format Compatibility**: Perfect integration with Black, autopep8, and other Python formatting tools
       - **Diff Mode**: Check-only mode for validation without modification
     name: PYTHON_ISORT
+    deprecated: true
+    deprecated_description: "PYTHON_ISORT is deprecated in favor of PYTHON_RUFF. Use PYTHON_RUFF with 'ruff check --select E,F,W,I,S' for 10-100x faster import sorting with full isort parity."
+    descriptor_flavors_exclude:
+      - cupcake
     is_formatter: true
     linter_url: https://pycqa.github.io/isort/
     linter_repo: https://github.com/PyCQA/isort
@@ -444,6 +461,8 @@ linters:
   # BANDIT
   - linter_name: bandit
     name: PYTHON_BANDIT
+    deprecated: true
+    deprecated_description: "PYTHON_BANDIT is deprecated in favor of PYTHON_RUFF. Use PYTHON_RUFF with 'ruff check --select E,F,W,I,S' (the S series corresponds to flake8-bandit) for 10-100x faster security checks."
     can_output_sarif: true
     file_extensions:
       - ".py"
@@ -582,6 +601,10 @@ linters:
   # MYPY
   - linter_name: mypy
     name: PYTHON_MYPY
+    deprecated: true
+    deprecated_description: "PYTHON_MYPY is deprecated in favor of PYTHON_TY. Astral ty provides unified, high-speed type checking for Python without the startup overhead of Mypy."
+    descriptor_flavors_exclude:
+      - cupcake
     file_extensions:
       - ".py"
       - ".pyi"
@@ -706,6 +729,10 @@ linters:
   # NBQA-MYPY
   - linter_name: nbqa
     name: PYTHON_NBQA_MYPY
+    deprecated: true
+    deprecated_description: "PYTHON_NBQA is deprecated in favor of PYTHON_TY and PYTHON_RUFF. Ruff natively checks Jupyter notebooks (.ipynb) and ty provides fast type checking."
+    descriptor_flavors_exclude:
+      - cupcake
     file_extensions:
       - ".ipynb"
     cli_lint_mode: list_of_files
@@ -842,6 +869,10 @@ linters:
   - class: PyrightLinter
     linter_name: pyright
     name: PYTHON_PYRIGHT
+    deprecated: true
+    deprecated_description: "PYTHON_PYRIGHT is deprecated in favor of PYTHON_TY. Astral ty provides unified, high-speed type checking for Python without requiring a separate Node.js runtime environment."
+    descriptor_flavors_exclude:
+      - cupcake
     file_extensions:
       - ".py"
       - ".pyi"
@@ -1034,7 +1065,7 @@ linters:
       - type: variable
         variable: PYTHON_DEFAULT_STYLE
         expected_value: ruff
-        default_value: black
+        default_value: ruff
     linter_text: |
       **Ruff Formatter** is the formatting component of Ruff, an extremely fast Python code formatter written in Rust. Designed as a drop-in replacement for Black, it provides consistent Python code formatting at unprecedented speed.
 
