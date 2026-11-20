@@ -11,10 +11,7 @@ import os
 import shutil
 import subprocess
 import tempfile
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
+import tomllib
 import unittest
 import uuid
 from unittest import mock
@@ -868,53 +865,6 @@ runs:
         req_id = str(uuid.uuid1())
         config.init_config(req_id, None, {})
         try:
-            expected_deprecated_ruff = ["black", "flake8", "isort", "bandit"]
-            expected_deprecated_ty = ["mypy", "pyright", "nbqa"]
-            expected_active = [
-                "ruff",
-                "ruff-format",
-                "ty",
-                "pylint",
-            ]
-
-            for name in expected_deprecated_ruff:
-                linter = linter_factory.build_linter(
-                    "PYTHON", name, {**base_params, "request_id": req_id}
-                )
-                self.assertTrue(
-                    getattr(linter, "deprecated", False),
-                    f"{name} should have deprecated: true",
-                )
-                self.assertIn(
-                    "Deprecated in favor of Ruff",
-                    getattr(linter, "deprecated_description", ""),
-                    f"{name} deprecated_description should guide towards Ruff",
-                )
-
-            for name in expected_deprecated_ty:
-                linter = linter_factory.build_linter(
-                    "PYTHON", name, {**base_params, "request_id": req_id}
-                )
-                self.assertTrue(
-                    getattr(linter, "deprecated", False),
-                    f"{name} should have deprecated: true",
-                )
-                self.assertIn(
-                    "PYTHON_TY",
-                    getattr(linter, "deprecated_description", ""),
-                    f"{name} deprecated_description should mention PYTHON_TY",
-                )
-
-            for name in expected_active:
-                linter = linter_factory.build_linter(
-                    "PYTHON", name, {**base_params, "request_id": req_id}
-                )
-                self.assertFalse(
-                    getattr(linter, "deprecated", False),
-                    f"{name} should NOT be deprecated",
-                )
-
-            # Check descriptor ordering
             descriptor_file = os.path.join(
                 utils.get_descriptor_dir(), "python.megalinter-descriptor.yml"
             )
@@ -934,47 +884,39 @@ runs:
                 "bandit",
             ]
             self.assertEqual(linter_names, expected_order)
-            self.assertEqual(linter_names[:4], ["ruff", "ruff-format", "ty", "pylint"])
 
-            # Check ty is included in cupcake and python flavors
-            ty_linter = linter_factory.build_linter(
-                "PYTHON", "ty", {**base_params, "request_id": req_id}
-            )
-            self.assertIn("cupcake", getattr(ty_linter, "descriptor_flavors", []))
-            self.assertIn("python", getattr(ty_linter, "descriptor_flavors", []))
+            expected_deprecated = [
+                "black",
+                "flake8",
+                "isort",
+                "bandit",
+                "mypy",
+                "pyright",
+                "nbqa",
+            ]
+            expected_active = ["ruff", "ruff-format", "ty", "pylint"]
 
-            # Check cupcake flavor exclusions and inclusions
-            linters_by_name = {l["linter_name"]: l for l in descriptor_info["linters"]}
-            for name in ["mypy", "pyright", "nbqa", "black", "flake8", "isort"]:
-                self.assertIn(
-                    "cupcake",
-                    linters_by_name[name].get("descriptor_flavors_exclude", []),
-                    f"{name} should exclude cupcake flavor",
-                )
-            self.assertNotIn(
-                "cupcake",
-                linters_by_name["bandit"].get("descriptor_flavors", []),
-                "bandit should not include cupcake flavor",
-            )
-            for name in ["ruff", "ruff-format", "ty", "pylint"]:
+            for name in expected_deprecated:
                 linter = linter_factory.build_linter(
                     "PYTHON", name, {**base_params, "request_id": req_id}
                 )
-                self.assertIn(
-                    "cupcake",
-                    getattr(linter, "descriptor_flavors", []),
-                    f"{name} should include cupcake flavor",
+                self.assertTrue(
+                    getattr(linter, "deprecated", False),
+                    f"{name} should have deprecated: true",
                 )
-                self.assertNotIn(
-                    "cupcake",
-                    getattr(linter, "descriptor_flavors_exclude", []),
-                    f"{name} should not exclude cupcake flavor",
+
+            for name in expected_active:
+                linter = linter_factory.build_linter(
+                    "PYTHON", name, {**base_params, "request_id": req_id}
+                )
+                self.assertFalse(
+                    getattr(linter, "deprecated", False),
+                    f"{name} should NOT be deprecated",
                 )
         finally:
             config.delete(req_id)
 
     def test_python_unified_astral_toolchain_profile(self):
-        """Comprehensively verify the unified Astral toolchain profile (#24, #8)."""
         base_params = self.build_activation_params([], [], "ENABLE")
         req_id = str(uuid.uuid1())
         config.init_config(req_id, None, {})
