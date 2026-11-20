@@ -65,7 +65,6 @@
         "PYTHON_RUFF",
         "PYTHON_RUFF_FORMAT",
         "PYTHON_TY",
-        "PYTHON_PYLINT",
         "REPOSITORY_CHECKOV",
         "REPOSITORY_GIT_DIFF",
         "REPOSITORY_BETTERLEAKS",
