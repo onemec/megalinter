@@ -8,8 +8,6 @@ import ast
 import contextlib
 import json
 import os
-import shutil
-import subprocess
 import tempfile
 import tomllib
 import unittest
@@ -860,63 +858,6 @@ runs:
         finally:
             config.delete(req_id_black)
 
-    def test_python_linters_deprecation_and_ordering(self):
-        base_params = self.build_activation_params([], [], "ENABLE")
-        req_id = str(uuid.uuid1())
-        config.init_config(req_id, None, {})
-        try:
-            descriptor_file = os.path.join(
-                utils.get_descriptor_dir(), "python.megalinter-descriptor.yml"
-            )
-            descriptor_info = linter_factory.build_descriptor_info(descriptor_file)
-            linter_names = [l["linter_name"] for l in descriptor_info["linters"]]
-            expected_order = [
-                "ruff",
-                "ruff-format",
-                "ty",
-                "bandit",
-                "black",
-                "flake8",
-                "isort",
-                "mypy",
-                "nbqa",
-                "pylint",
-                "pyright",
-            ]
-            self.assertEqual(linter_names, expected_order)
-
-            expected_deprecated = [
-                "bandit",
-                "black",
-                "flake8",
-                "isort",
-                "mypy",
-                "nbqa",
-                "pylint",
-                "pyright",
-            ]
-            expected_active = ["ruff", "ruff-format", "ty"]
-
-            for name in expected_deprecated:
-                linter = linter_factory.build_linter(
-                    "PYTHON", name, {**base_params, "request_id": req_id}
-                )
-                self.assertTrue(
-                    getattr(linter, "deprecated", False),
-                    f"{name} should have deprecated: true",
-                )
-
-            for name in expected_active:
-                linter = linter_factory.build_linter(
-                    "PYTHON", name, {**base_params, "request_id": req_id}
-                )
-                self.assertFalse(
-                    getattr(linter, "deprecated", False),
-                    f"{name} should NOT be deprecated",
-                )
-        finally:
-            config.delete(req_id)
-
     def test_python_unified_astral_toolchain_profile(self):
         base_params = self.build_activation_params([], [], "ENABLE")
         req_id = str(uuid.uuid1())
@@ -927,8 +868,8 @@ runs:
             )
             descriptor_info = linter_factory.build_descriptor_info(descriptor_file)
             linters = descriptor_info["linters"]
-            linter_names = [l["linter_name"] for l in linters]
-            linters_by_name = {l["linter_name"]: l for l in linters}
+            linter_names = [item["linter_name"] for item in linters]
+            linters_by_name = {item["linter_name"]: item for item in linters}
 
             # 1. Unified Astral toolchain ordering: ruff, ruff-format, ty
             expected_active_order = ["ruff", "ruff-format", "ty"]
@@ -1038,7 +979,7 @@ runs:
             #    and excludes all 8 deprecated tools.
             cupcake_linters = flavor_factory.list_flavor_linters("cupcake")
             cupcake_python_linters = [
-                l for l in cupcake_linters if l.startswith("PYTHON_")
+                name for name in cupcake_linters if name.startswith("PYTHON_")
             ]
             expected_cupcake_python = [
                 "PYTHON_RUFF",
@@ -1094,7 +1035,7 @@ runs:
             # 5. python flavor contains all Python linters (retaining legacy tools for smooth migration)
             python_flavor_linters = flavor_factory.list_flavor_linters("python")
             python_flavor_python = [
-                l for l in python_flavor_linters if l.startswith("PYTHON_")
+                name for name in python_flavor_linters if name.startswith("PYTHON_")
             ]
             expected_python_flavor = [
                 linters_by_name[name]["name"] for name in expected_full_order
@@ -1251,4 +1192,3 @@ runs:
             "eval(" in combined_bad_content and "shell=True" in combined_bad_content,
             "Bad fixtures must contain security (S) violation patterns (eval and shell=True)",
         )
-
