@@ -434,6 +434,10 @@ linters:
           url: https://marketplace.visualstudio.com/items?itemName=ms-python.pylint
   # MYPY
   - linter_name: mypy
+    deprecated: true
+    deprecated_description: "Deprecated in favor of Astral ty (PYTHON_TY). ty is a high-performance Python type checker written in Rust, running 10-50x faster with instant salsa-based diagnostics."
+    descriptor_flavors_exclude:
+      - cupcake
     name: PYTHON_MYPY
     file_extensions:
       - ".py"
@@ -556,8 +560,102 @@ linters:
       vscode:
         - name: Mypy
           url: https://marketplace.visualstudio.com/items?itemName=matangover.mypy
+
+  # PyRight
+  - class: PyrightLinter
+    linter_name: pyright
+    deprecated: true
+    deprecated_description: "Deprecated in favor of Astral ty (PYTHON_TY). ty provides high-speed type checking in Rust without requiring a Node.js runtime."
+    descriptor_flavors_exclude:
+      - cupcake
+    name: PYTHON_PYRIGHT
+    file_extensions:
+      - ".py"
+      - ".pyi"
+    linter_text: |
+      **Pyright** is Microsoft's high-performance static type checker for Python that provides fast, accurate type analysis. It serves as a powerful alternative to MyPy with focus on speed and developer experience.
+
+      **Key Features:**
+
+      - **High Performance**: Lightning-fast type checking with incremental analysis and efficient caching
+      - **Advanced Type Features**: Full support for generics, protocols, type unions, literal types, and advanced Python typing features
+      - **Configuration Flexibility**: Comprehensive configuration options through pyrightconfig.json for fine-tuned type checking
+      - **Multi-Python Support**: Can analyze code for different Python versions and check version compatibility
+      - **Import Resolution**: Sophisticated import resolution handling complex package structures and namespace packages
+      - **Type Inference**: Advanced type inference engine that minimizes the need for explicit type annotations
+      - **Strict Mode Support**: Configurable strictness levels from basic checking to comprehensive type safety enforcement
+      - **Cross-Platform**: Consistent behavior across Windows, macOS, and Linux development environments
+
+      **Note**: If you don't use Python static typing, disable this linter by adding `PYTHON_PYRIGHT` to `DISABLE_LINTERS` in your `.mega-linter.yml` config file.
+    linter_url: https://github.com/Microsoft/pyright
+    linter_rules_url: https://github.com/microsoft/pyright#type-checking-features
+    linter_repo: https://github.com/microsoft/pyright
+    linter_megalinter_ref_url: https://microsoft.github.io/pyright/#/ci-integration
+    linter_spdx_license: MIT
+    linter_banner_image_url: https://github.com/microsoft/pyright/raw/main/docs/img/PyrightLarge.png
+    linter_speed: 1
+    linter_rules_configuration_url: https://github.com/microsoft/pyright/blob/main/docs/configuration.md
+    linter_rules_inline_disable_url: https://github.com/microsoft/pyright/blob/main/docs/comments.md#file-level-type-controls
+    cli_lint_mode: list_of_files
+    supported_cli_lint_modes:
+      - file
+      - list_of_files
+      - project
+    cli_lint_mode_project_extra_args_after:
+      - .
+    cli_lint_mode_project_config_paths_regex: "\"include\"\\s*:"
+    config_file_name: pyrightconfig.json
+    cli_config_arg_name: -p
+    cli_lint_errors_count: regex_sum
+    cli_lint_errors_regex: "([0-9]+) errors,"
+    test_folder: python_mypy
+    examples:
+      - "pyright myfile.py myfile2.py"
+      - "pyright myfile.py"
+    install:
+      dockerfile:
+        - |-
+          # renovate: datasource=npm depName=pyright
+          ARG NPM_PYRIGHT_VERSION=1.1.414
+      npm:
+        - pyright@${NPM_PYRIGHT_VERSION}
+    native_install:
+      method: npm
+      requires:
+        - runtime: node
+          version: ">=14"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+        - darwin/amd64
+        - darwin/arm64
+        - windows/amd64
+    supported_platforms:
+      platform:
+        - linux/amd64
+        - linux/arm64
+    ide:
+      emacs:
+        - name: LSP-pyright
+          url: https://github.com/emacs-lsp/lsp-pyright
+      sublime:
+        - name: LSP-pyright
+          url: https://packagecontrol.io/packages/LSP-pyright
+      vim:
+        - name: Ale
+          url: https://github.com/dense-analysis/ale
+        - name: coc-pyright
+          url: https://github.com/fannheyward/coc-pyright
+      vscode:
+        - name: PyRight
+          url: https://marketplace.visualstudio.com/items?itemName=ms-pyright.pyright
+
   # NBQA-MYPY
   - linter_name: nbqa
+    deprecated: true
+    deprecated_description: "Deprecated in favor of Astral ty (PYTHON_TY). ty provides high-speed Python type checking in Rust."
+    descriptor_flavors_exclude:
+      - cupcake
     name: PYTHON_NBQA_MYPY
     file_extensions:
       - ".ipynb"
@@ -691,90 +789,6 @@ linters:
   #         ARG PIP_PYTYPE_VERSION=2024.10.11
   #     pip:
   #       - pytype==${PIP_PYTYPE_VERSION}
-  # PyRight
-  - class: PyrightLinter
-    linter_name: pyright
-    name: PYTHON_PYRIGHT
-    file_extensions:
-      - ".py"
-      - ".pyi"
-    linter_text: |
-      **Pyright** is Microsoft's high-performance static type checker for Python that provides fast, accurate type analysis. It serves as a powerful alternative to MyPy with focus on speed and developer experience.
-
-      **Key Features:**
-
-      - **High Performance**: Lightning-fast type checking with incremental analysis and efficient caching
-      - **Advanced Type Features**: Full support for generics, protocols, type unions, literal types, and advanced Python typing features
-      - **Configuration Flexibility**: Comprehensive configuration options through pyrightconfig.json for fine-tuned type checking
-      - **Multi-Python Support**: Can analyze code for different Python versions and check version compatibility
-      - **Import Resolution**: Sophisticated import resolution handling complex package structures and namespace packages
-      - **Type Inference**: Advanced type inference engine that minimizes the need for explicit type annotations
-      - **Strict Mode Support**: Configurable strictness levels from basic checking to comprehensive type safety enforcement
-      - **Cross-Platform**: Consistent behavior across Windows, macOS, and Linux development environments
-
-      **Note**: If you don't use Python static typing, disable this linter by adding `PYTHON_PYRIGHT` to `DISABLE_LINTERS` in your `.mega-linter.yml` config file.
-    linter_url: https://github.com/Microsoft/pyright
-    linter_rules_url: https://github.com/microsoft/pyright#type-checking-features
-    linter_repo: https://github.com/microsoft/pyright
-    linter_megalinter_ref_url: https://microsoft.github.io/pyright/#/ci-integration
-    linter_spdx_license: MIT
-    linter_banner_image_url: https://github.com/microsoft/pyright/raw/main/docs/img/PyrightLarge.png
-    linter_speed: 1
-    linter_rules_configuration_url: https://github.com/microsoft/pyright/blob/main/docs/configuration.md
-    linter_rules_inline_disable_url: https://github.com/microsoft/pyright/blob/main/docs/comments.md#file-level-type-controls
-    cli_lint_mode: list_of_files
-    supported_cli_lint_modes:
-      - file
-      - list_of_files
-      - project
-    cli_lint_mode_project_extra_args_after:
-      - .
-    cli_lint_mode_project_config_paths_regex: "\"include\"\\s*:"
-    config_file_name: pyrightconfig.json
-    cli_config_arg_name: -p
-    cli_lint_errors_count: regex_sum
-    cli_lint_errors_regex: "([0-9]+) errors,"
-    test_folder: python_mypy
-    examples:
-      - "pyright myfile.py myfile2.py"
-      - "pyright myfile.py"
-    install:
-      dockerfile:
-        - |-
-          # renovate: datasource=npm depName=pyright
-          ARG NPM_PYRIGHT_VERSION=1.1.414
-      npm:
-        - pyright@${NPM_PYRIGHT_VERSION}
-    native_install:
-      method: npm
-      requires:
-        - runtime: node
-          version: ">=14"
-      platforms:
-        - linux/amd64
-        - linux/arm64
-        - darwin/amd64
-        - darwin/arm64
-        - windows/amd64
-    supported_platforms:
-      platform:
-        - linux/amd64
-        - linux/arm64
-    ide:
-      emacs:
-        - name: LSP-pyright
-          url: https://github.com/emacs-lsp/lsp-pyright
-      sublime:
-        - name: LSP-pyright
-          url: https://packagecontrol.io/packages/LSP-pyright
-      vim:
-        - name: Ale
-          url: https://github.com/dense-analysis/ale
-        - name: coc-pyright
-          url: https://github.com/fannheyward/coc-pyright
-      vscode:
-        - name: PyRight
-          url: https://marketplace.visualstudio.com/items?itemName=ms-pyright.pyright
 
   # BLACK
   - linter_name: black
